@@ -1,1 +1,157 @@
-# Game
+```
+  _   _ _____ _  _ _   _ ___    ___
+ | \ | | ____| \/ | | | / __|  |__ \
+ |  \| |  _| |    | | | \__ \    / /
+ | |\  | |___| /\ | |_| |___/   |_|
+ |_| \_|_____|_||_|\___/|___|   (_)
+
+      C I T Y   B U I L D E R
+     ascii post-apocalittico
+```
+
+# NEXUS-7
+
+City builder in **grafica ASCII pura**, ambientato in un futuro post-apocalittico.
+Anno 2187, dopo il Grande Silenzio: sei l'Amministratore del Settore-7 e devi
+trasformare un modulo di atterraggio in una metropoli, fino a costruire lo
+Spazioporto Esodo e lasciare il pianeta.
+
+Gira nel browser, **è pensato per Android** (touch, schermo verticale, offline),
+non richiede installazione né connessione dopo la prima apertura.
+
+---
+
+## Giocare su Android
+
+**Opzione 1 — GitHub Pages (consigliata).**
+
+1. Su GitHub: *Settings → Pages → Source: Deploy from a branch*, scegli il branch
+   `claude/ascii-city-builder-game-iyi897` e cartella `/ (root)`, poi *Save*.
+2. Apri l'indirizzo pubblicato (`https://<utente>.github.io/<repo>/`) con Chrome su Android.
+3. Menu di Chrome → **Aggiungi a schermata Home**: il gioco si apre a schermo intero
+   come un'app e funziona anche **offline** (service worker).
+
+**Opzione 2 — server locale.**
+
+```bash
+cd Game && python3 -m http.server 8000
+```
+Poi apri `http://<ip-del-pc>:8000` dal telefono sulla stessa rete Wi-Fi.
+
+**Opzione 3 — file locale.** Copia la cartella sul telefono e apri `index.html`.
+Funziona, ma da `file://` il salvataggio offline via service worker resta disattivato.
+
+I salvataggi usano `localStorage` del browser: restano sul dispositivo.
+
+---
+
+## Comandi
+
+| Azione | Come |
+|---|---|
+| Spostarsi sulla mappa | trascina con un dito |
+| Selezionare una cella | tocca |
+| Confermare (scansiona / costruisci / sgombera) | tocca **di nuovo** la stessa cella |
+| Zoom | `[-]` `[+]` in basso a destra — sotto il minimo si passa alla **mappa tattica** |
+| Velocità | il pulsante `x1` in alto a destra cicla `|| → x1 → x2 → x4` |
+| Pannelli | barra in basso: COSTRUISCI, SCANSIONE, RICERCA, CITTÀ, DIARIO, MENU |
+
+Con tastiera collegata: frecce per il cursore, `Invio` conferma, `Esc` annulla, `+`/`-` zoom.
+
+---
+
+## Meccaniche
+
+**Risorse.** ROTTAMI (RTM), ACQUA (H2O), BIOMASSA (BIO), LEGHE (LEG), DATI (DAT).
+Ogni risorsa ha un tetto di stoccaggio, che cresce con il livello della città e con i Depositi:
+la produzione oltre il tetto va persa.
+
+**Energia.** Non si accumula. È un bilancio istantaneo fra produzione e richiesta:
+se la richiesta supera la produzione, *tutte* le strutture consumatrici rendono in
+proporzione. Tieni sempre un margine.
+
+**Addetti.** Il 65% dei coloni lavora. Se i posti di lavoro superano la forza lavoro
+disponibile, la resa cala ovunque: servono più alloggi.
+
+**Coloni.** Consumano acqua e biomassa a ogni ciclo. In carenza il morale crolla e si muore.
+La crescita è proporzionale alla popolazione: più la città è grande, più accelera.
+
+**Contaminazione.** Fonderie e reattori inquinano; filtri e rigeneratori ripuliscono.
+Oltre il 55% i coloni cominciano a morire.
+
+**Adiacenze.** Un TRACCIATO adiacente dà +15% a una struttura. I raccoglitori rendono
+di più vicino alle macerie, il Pozzo Profondo *deve* essere costruito accanto a una pozza
+tossica, le serre guadagnano vicino alle fonti d'acqua.
+
+**Macerie.** Non sono edificabili: vanno sgomberate prima, e in cambio danno rottami
+(a volte leghe o dati).
+
+**Potenziamenti.** Ogni struttura sale fino a **MK-5**: ×2,6 su resa, alloggi e difesa.
+Nel tardo gioco, quando lo spazio finisce, conviene crescere in verticale.
+
+**Difesa e incursioni.** I predoni attaccano periodicamente e diventano più forti a ogni
+livello. Se la difesa è sotto la loro forza perdi risorse, strutture e coloni.
+
+**Eventi.** Dieci eventi casuali: tempeste di ruggine, piogge acide, blackout, epidemie,
+incursioni, ma anche profughi, relitti orbitali, archivi intatti, carovane e falde acquifere.
+
+---
+
+## Progressione
+
+Dieci livelli di città, ognuno estende il perimetro edificabile e sblocca nuove strutture:
+
+| Liv | Nome | Coloni | Strutture |
+|---|---|---|---|
+| 1 | AVAMPOSTO | — | — |
+| 2 | INSEDIAMENTO | 14 | 6 |
+| 3 | BORGO DI FERRO | 32 | 13 |
+| 4 | DISTRETTO | 62 | 21 |
+| 5 | CITTADELLA | 110 | 29 |
+| 6 | NEXO URBANO | 180 | 37 |
+| 7 | METROPOLI DI CENERE | 280 | 46 |
+| 8 | CONURBAZIONE | 380 | 55 |
+| 9 | ARCOPOLI | 520 | 64 |
+| 10 | NEXUS PRIME | 700 | 74 |
+
+**25 strutture** su 8 categorie e **10 progetti di ricerca** in albero tecnologico
+(dal Fotovoltaico Spettrale al Protocollo Esodo).
+
+**Vittoria:** ricerca PROTOCOLLO ESODO, costruisci lo SPAZIOPORTO ESODO,
+apri la sua SCANSIONE e avvia il lancio. Sessanta cicli di conto alla rovescia — e difendilo.
+
+---
+
+## Scansione degli edifici
+
+Il pannello **SCANSIONE** è lo zoom sulla singola struttura: arte ASCII ingrandita e
+incorniciata, descrizione, e tutte le caratteristiche in chiaro —
+
+- integrità, resa totale, stato operativo;
+- produzione e consumi effettivi per ciclo (con valore base a confronto);
+- **tutti i moltiplicatori** che compongono la resa: livello MK, integrità, copertura
+  addetti, copertura della rete elettrica, morale, tecnologie e ogni bonus di adiacenza;
+- azioni: potenzia, ripara, demolisci.
+
+---
+
+## Struttura del progetto
+
+```
+index.html              shell dell'app
+css/style.css           tema terminale CRT, layout mobile-first
+js/data.js              risorse, terreni, 25 edifici con arte ASCII, tecnologie, livelli, eventi
+js/engine.js            stato, generazione mappa, simulazione economica, eventi, salvataggio
+js/render.js            renderer ASCII (mappa tattica e di dettaglio)
+js/ui.js                HUD, pannelli, input touch, ciclo di gioco
+js/main.js              avvio e registrazione service worker
+sw.js                   cache offline
+manifest.webmanifest    installazione come app Android
+```
+
+Nessuna dipendenza, nessun passo di build: sono file statici.
+
+**Vincolo grafico:** ogni carattere disegnato appartiene all'ASCII stampabile (32–126).
+Niente box-drawing Unicode né emoji, perché su Android hanno larghezze incoerenti e
+spezzerebbero l'allineamento della griglia monospazio.
+Ogni arte misura esattamente `larghezza×5` per `altezza×3` caratteri.

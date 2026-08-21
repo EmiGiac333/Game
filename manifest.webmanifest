@@ -1,0 +1,16 @@
+{
+  "name": "NEXUS-7 :: City Builder ASCII",
+  "short_name": "NEXUS-7",
+  "description": "City builder ASCII post-apocalittico: ricostruisci il Settore-7, gestisci le risorse e avvia l'Esodo.",
+  "lang": "it",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0b0d0a",
+  "theme_color": "#0b0d0a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
