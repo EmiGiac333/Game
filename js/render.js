@@ -1,195 +1,178 @@
 /* ============================================================
    NEXUS-7 :: render.js
-   Disegna la mappa come griglia di caratteri ASCII.
-   Due modalita': TATTICA (1 carattere per cella) e DETTAGLIO
-   (5x3 caratteri per cella, con l arte degli edifici).
+   Disegna la plancia su canvas: terreno, perimetro del settore,
+   strutture, stato e cursore. Nessuna interpolazione: gli sprite
+   restano pixelati a qualunque livello di zoom.
    ============================================================ */
 (function (global) {
   'use strict';
 
-  var D = global.DATA, E = global.Engine;
-
-  function esc(c) {
-    if (c === '&') return '&amp;';
-    if (c === '<') return '&lt;';
-    if (c === '>') return '&gt;';
-    return c;
-  }
+  var D = global.DATA, E = global.Engine, S = global.Sprites;
 
   var Render = {
-    modo: 'dettaglio',      /* 'dettaglio' | 'tattica' */
+    px: 32,                     /* lato di una cella, in pixel */
+    canvas: null,
+    ctx: null,
     cursore: { x: 0, y: 0 },
     tipoDaCostruire: null,
 
-    /* Griglia di lavoro: caratteri + classi colore. */
-    _griglia: function (w, h) {
-      var ch = [], cl = [];
-      for (var y = 0; y < h; y++) {
-        ch.push(new Array(w).fill(' '));
-        cl.push(new Array(w).fill('t-ash'));
-      }
-      return { ch: ch, cl: cl, w: w, h: h };
+    get modo() { return this.px <= 8 ? 'tattica' : 'dettaglio'; },
+
+    imposta: function (canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.ctx.imageSmoothingEnabled = false;
     },
 
-    /* ---------------------------------------------------------
-       Arte dinamica dei tracciati: si collegano ai vicini.
-       --------------------------------------------------------- */
-    arteStrada: function (x, y) {
-      var g = [[' ', ' ', ' ', ' ', ' '], [' ', ' ', ' ', ' ', ' '], [' ', ' ', ' ', ' ', ' ']];
+    dimensiona: function () {
+      if (!this.canvas) return;
+      this.canvas.width = E.MAP_W * this.px;
+      this.canvas.height = E.MAP_H * this.px;
+      this.ctx.imageSmoothingEnabled = false;
+    },
+
+    /* Maschera dei tracciati adiacenti: N=1 S=2 E=4 O=8. */
+    bitStrada: function (x, y) {
       function road(xx, yy) {
         var b = E.edificioSu(xx, yy);
-        return !!(b && b.tipo === 'strada');
+        return b && b.tipo === 'strada' ? 1 : 0;
       }
-      var N = road(x, y - 1), S = road(x, y + 1), W = road(x - 1, y), Ee = road(x + 1, y);
-      if (N) g[0][2] = '|';
-      if (S) g[2][2] = '|';
-      if (W) { g[1][0] = '-'; g[1][1] = '-'; }
-      if (Ee) { g[1][3] = '-'; g[1][4] = '-'; }
-      var c = '+';
-      if ((N || S) && !(W || Ee)) c = '|';
-      else if ((W || Ee) && !(N || S)) c = '-';
-      else if (!N && !S && !W && !Ee) c = 'o';
-      g[1][2] = c;
-      return [g[0].join(''), g[1].join(''), g[2].join('')];
+      return road(x, y - 1) | (road(x, y + 1) << 1) | (road(x + 1, y) << 2) | (road(x - 1, y) << 3);
     },
 
-    /* ---------------------------------------------------------
-       DISEGNO PRINCIPALE -> stringa HTML per il <pre>
-       --------------------------------------------------------- */
+    /* =========================================================
+       DISEGNO COMPLETO
+       ========================================================= */
     disegna: function () {
-      return this.modo === 'tattica' ? this.disegnaTattica() : this.disegnaDettaglio();
-    },
+      if (!this.ctx || !S.pronto) return;
+      var g = this.ctx, px = this.px, st = E.state;
+      var x, y, b, def;
 
-    disegnaDettaglio: function () {
-      var st = E.state, TW = D.TILE_W, TH = D.TILE_H;
-      var G = this._griglia(E.MAP_W * TW, E.MAP_H * TH);
-      var x, y, i, j;
+      g.imageSmoothingEnabled = false;
+      g.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-      /* --- livello terreno --- */
+      /* --- terreno --- */
       for (y = 0; y < E.MAP_H; y++) {
         for (x = 0; x < E.MAP_W; x++) {
           var t = E.tile(x, y);
-          var ter = D.TERRAIN[t.t];
-          var fuori = !E.nelSettore(x, y, 1, 1);
-          var cls = 't-' + (t.cl ? 'ash' : ter.color) + (fuori ? ' fuori' : '');
-          for (j = 0; j < TH; j++) {
-            for (i = 0; i < TW; i++) {
-              G.ch[y * TH + j][x * TW + i] = t.p[j].charAt(i);
-              G.cl[y * TH + j][x * TW + i] = cls;
-            }
-          }
-          /* confine del settore autorizzato */
-          if (fuori && !E.nelSettore(x, y, 1, 1)) {
-            var dentroVicino = E.nelSettore(x, y - 1, 1, 1) || E.nelSettore(x, y + 1, 1, 1) ||
-                               E.nelSettore(x - 1, y, 1, 1) || E.nelSettore(x + 1, y, 1, 1);
-            if (dentroVicino) {
-              for (i = 0; i < TW; i++) {
-                if (G.ch[y * TH][x * TW + i] === ' ') { G.ch[y * TH][x * TW + i] = '.'; G.cl[y * TH][x * TW + i] = 't-confine'; }
-              }
-            }
-          }
+          var tipo = (t.t === 'rubble' && t.cl) ? 'ash' : t.t;
+          var img = S.prendi('te_' + tipo + '_' + S.varianteTerreno(x, y), px);
+          if (img) g.drawImage(img, x * px, y * px);
         }
       }
 
-      /* --- livello edifici --- */
-      for (var b = 0; b < st.edifici.length; b++) {
-        var ed = st.edifici[b], def = D.byId(ed.tipo);
-        var arte = def.road ? this.arteStrada(ed.x, ed.y) : def.art;
-        if (!arte) continue;
-        var colore = 'b-' + def.color;
-        var spento = !ed.attivo || ed.hp < 60;
-        for (j = 0; j < arte.length; j++) {
-          for (i = 0; i < arte[j].length; i++) {
-            var c = arte[j].charAt(i);
-            if (c === ' ') continue;              /* trasparente: si vede il terreno */
-            var gy = ed.y * TH + j, gx = ed.x * TW + i;
-            if (gy >= G.h || gx >= G.w) continue;
-            G.ch[gy][gx] = c;
-            G.cl[gy][gx] = colore + (spento ? ' spento' : '');
-          }
-        }
-        /* indicatore di stato in alto a sinistra della struttura */
-        if (!def.road) {
-          var sy = ed.y * TH, sx = ed.x * TW;
-          if (ed.hp < 60) { G.ch[sy][sx] = '!'; G.cl[sy][sx] = 'b-allarme'; }
-          else if (!ed.attivo) { G.ch[sy][sx] = 'x'; G.cl[sy][sx] = 'b-allarme'; }
-        }
-      }
-
-      /* --- livello cursore / anteprima costruzione --- */
-      this._cursore(G, TW, TH);
-      return this._html(G);
-    },
-
-    disegnaTattica: function () {
-      var st = E.state;
-      var G = this._griglia(E.MAP_W, E.MAP_H);
-      var x, y;
+      /* --- fuori dal perimetro autorizzato --- */
+      g.fillStyle = 'rgba(4,6,4,0.62)';
       for (y = 0; y < E.MAP_H; y++) {
         for (x = 0; x < E.MAP_W; x++) {
-          var t = E.tile(x, y), ter = D.TERRAIN[t.t];
-          var fuori = !E.nelSettore(x, y, 1, 1);
-          var ch = t.cl ? '.' : ter.chars.charAt(0);
-          var cls = 't-' + (t.cl ? 'ash' : ter.color) + (fuori ? ' fuori' : '');
-          var ed = E.edificioSu(x, y);
-          if (ed) {
-            var def = D.byId(ed.tipo);
-            ch = def.glyph;
-            cls = 'b-' + def.color + ((!ed.attivo || ed.hp < 60) ? ' spento' : '');
-          }
-          G.ch[y][x] = ch;
-          G.cl[y][x] = cls;
+          if (!E.nelSettore(x, y, 1, 1)) g.fillRect(x * px, y * px, px, px);
         }
       }
-      this._cursore(G, 1, 1);
-      return this._html(G);
+
+      /* --- griglia discreta, solo dentro il perimetro --- */
+      if (px >= 32) {
+        var cx = Math.floor(E.MAP_W / 2), cy = Math.floor(E.MAP_H / 2), r = E.raggio();
+        var gx0 = Math.max(0, cx - r), gy0 = Math.max(0, cy - r);
+        var gx1 = Math.min(E.MAP_W, cx + r + 1), gy1 = Math.min(E.MAP_H, cy + r + 1);
+        g.strokeStyle = 'rgba(170,190,160,0.045)';
+        g.lineWidth = 1;
+        g.beginPath();
+        for (x = gx0; x <= gx1; x++) { g.moveTo(x * px + 0.5, gy0 * px); g.lineTo(x * px + 0.5, gy1 * px); }
+        for (y = gy0; y <= gy1; y++) { g.moveTo(gx0 * px, y * px + 0.5); g.lineTo(gx1 * px, y * px + 0.5); }
+        g.stroke();
+      }
+
+      this.perimetro(g, px);
+
+      /* --- strutture --- */
+      for (var i = 0; i < st.edifici.length; i++) {
+        b = st.edifici[i]; def = D.byId(b.tipo);
+        var nome = def.road ? 'strada_' + this.bitStrada(b.x, b.y) : 'ed_' + b.tipo;
+        var sp = S.prendi(nome, px);
+        if (!sp) continue;
+        var spento = !b.attivo || b.hp < 60 || b.inCantiere;
+        if (spento) g.globalAlpha = 0.55;
+        g.drawImage(sp, b.x * px, b.y * px);
+        g.globalAlpha = 1;
+        if (!def.road && px >= 16) this.stato(g, b, def, px);
+      }
+
+      this.cursoreDisegna(g, px);
     },
 
-    /* Evidenzia il cursore e, in modalita' costruzione, l ingombro previsto. */
-    _cursore: function (G, TW, TH) {
-      var cur = this.cursore, w = 1, h = 1, valido = true;
+    /* Cornice tratteggiata sul confine del settore autorizzato. */
+    perimetro: function (g, px) {
+      var cx = Math.floor(E.MAP_W / 2), cy = Math.floor(E.MAP_H / 2), r = E.raggio();
+      var x0 = Math.max(0, cx - r), y0 = Math.max(0, cy - r);
+      var x1 = Math.min(E.MAP_W - 1, cx + r), y1 = Math.min(E.MAP_H - 1, cy + r);
+      if (x0 === 0 && y0 === 0 && x1 === E.MAP_W - 1 && y1 === E.MAP_H - 1) return;
+      var sp = Math.max(2, Math.round(px / 4));
+      g.save();
+      g.strokeStyle = 'rgba(224,168,60,0.75)';
+      g.lineWidth = Math.max(1, Math.round(px / 16));
+      g.setLineDash([sp, sp]);
+      g.strokeRect(x0 * px + 0.5, y0 * px + 0.5, (x1 - x0 + 1) * px - 1, (y1 - y0 + 1) * px - 1);
+      g.restore();
+    },
+
+    /* Pastiglia di allarme su strutture ferme o danneggiate. */
+    stato: function (g, b, def, px) {
+      var d = Math.max(4, Math.round(px / 5));
+      var x = b.x * px + 2, y = b.y * px + 2;
+      var col = null;
+      if (b.inCantiere) col = '#e0a83c';
+      else if (b.hp < 60) col = '#e05c4d';
+      else if (!b.attivo) col = '#c9a227';
+      if (!col) return;
+      g.fillStyle = 'rgba(11,13,10,0.85)';
+      g.fillRect(x, y, d, d);
+      g.fillStyle = col;
+      g.fillRect(x + 1, y + 1, d - 2, d - 2);
+      if (d >= 7) {
+        g.fillStyle = '#0b0d0a';
+        g.fillRect(x + Math.floor(d / 2), y + 2, 1, d - 5);
+        g.fillRect(x + Math.floor(d / 2), y + d - 3, 1, 1);
+      }
+    },
+
+    /* Cursore e anteprima di costruzione. */
+    cursoreDisegna: function (g, px) {
+      var c = this.cursore, w = 1, h = 1, valido = true;
       if (this.tipoDaCostruire) {
         var def = D.byId(this.tipoDaCostruire);
         w = def.w; h = def.h;
-        valido = E.puoPiazzare(this.tipoDaCostruire, cur.x, cur.y).ok;
-      }
-      var cls = this.tipoDaCostruire ? (valido ? 'cur-ok' : 'cur-no') : 'cur';
-      for (var j = 0; j < h * TH; j++) {
-        for (var i = 0; i < w * TW; i++) {
-          var gy = cur.y * TH + j, gx = cur.x * TW + i;
-          if (gy < 0 || gx < 0 || gy >= G.h || gx >= G.w) continue;
-          /* in anteprima costruzione mostro l arte dell edificio */
-          if (this.tipoDaCostruire) {
-            var d2 = D.byId(this.tipoDaCostruire);
-            var arte = d2.road ? ['     ', '  o  ', '     '] : d2.art;
-            if (TW > 1 && arte && arte[j] && arte[j].charAt(i) !== ' ') G.ch[gy][gx] = arte[j].charAt(i);
-            else if (TW === 1) G.ch[gy][gx] = d2.glyph;
-          }
-          G.cl[gy][gx] = cls;
+        valido = E.puoPiazzare(this.tipoDaCostruire, c.x, c.y).ok;
+        var nome = def.road ? 'strada_' + this.bitStrada(c.x, c.y) : 'ed_' + def.id;
+        var sp = S.prendi(nome, px);
+        if (sp) {
+          g.globalAlpha = 0.6;
+          g.drawImage(sp, c.x * px, c.y * px);
+          g.globalAlpha = 1;
         }
       }
-    },
+      var col = this.tipoDaCostruire ? (valido ? '#8fd14f' : '#e05c4d') : '#e6f0dc';
+      var X = c.x * px, Y = c.y * px, W = w * px, H = h * px;
+      var l = Math.max(3, Math.round(px / 3));           /* lunghezza delle staffe */
+      var s = Math.max(1, Math.round(px / 16));
 
-    /* Converte la griglia in HTML unendo i caratteri con la stessa classe. */
-    _html: function (G) {
-      var out = [];
-      for (var y = 0; y < G.h; y++) {
-        var riga = '', run = '', cls = null;
-        for (var x = 0; x < G.w; x++) {
-          var c = G.cl[y][x];
-          if (c !== cls) {
-            if (run) riga += '<i class="' + cls + '">' + run + '</i>';
-            run = ''; cls = c;
-          }
-          run += esc(G.ch[y][x]);
-        }
-        if (run) riga += '<i class="' + cls + '">' + run + '</i>';
-        out.push(riga);
+      if (this.tipoDaCostruire && !valido) {
+        g.fillStyle = 'rgba(224,92,77,0.22)';
+        g.fillRect(X, Y, W, H);
       }
-      return out.join('\n');
+      g.fillStyle = col;
+      /* quattro staffe angolari, leggibili anche su fondo chiaro */
+      [[X, Y, 1, 1], [X + W - l, Y, -1, 1], [X, Y + H - s, 1, -1], [X + W - l, Y + H - s, -1, -1]]
+        .forEach(function (a, k) {
+          var bx = k % 2 === 0 ? X : X + W - l;
+          var by = k < 2 ? Y : Y + H - s;
+          g.fillRect(bx, by, l, s);
+        });
+      [[X, Y], [X + W - s, Y], [X, Y + H - l], [X + W - s, Y + H - l]].forEach(function (p) {
+        g.fillRect(p[0], p[1], s, l);
+      });
     },
 
-    /* Barra di avanzamento ASCII: [####------] */
+    /* Barra di avanzamento ASCII, usata dai pannelli testuali. */
     barra: function (frazione, larghezza) {
       larghezza = larghezza || 10;
       var n = Math.max(0, Math.min(larghezza, Math.round(frazione * larghezza)));

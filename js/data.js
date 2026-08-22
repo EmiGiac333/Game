@@ -7,10 +7,6 @@
 (function (global) {
   'use strict';
 
-  /* Dimensioni di una cella della mappa in caratteri. */
-  var TILE_W = 5;
-  var TILE_H = 3;
-
   /* ---------------------------------------------------------
      RISORSE
      --------------------------------------------------------- */
@@ -27,163 +23,16 @@
 
   /* ---------------------------------------------------------
      TERRENI
-     charset = caratteri sparsi sul terreno, density = 0..1
+     Ogni tipo ha tre varianti grafiche in sprites/te_<tipo>_<n>.png
      --------------------------------------------------------- */
   var TERRAIN = {
-    ash:    { nome: 'CENERE',        chars: '.,`',   density: 0.06, color: 'ash',    build: true,  clear: false },
-    dust:   { nome: 'POLVERE ROSSA', chars: '..:',   density: 0.10, color: 'dust',   build: true,  clear: false },
-    rubble: { nome: 'MACERIE',       chars: '#%*x/', density: 0.38, color: 'scrap',  build: false, clear: true  },
-    crater: { nome: 'CRATERE',       chars: 'oO0.',  density: 0.20, color: 'dim',    build: true,  clear: false },
-    pool:   { nome: 'POZZA TOSSICA', chars: '~~-',   density: 0.50, color: 'toxic',  build: false, clear: false },
-    rock:   { nome: 'SPERONE',       chars: '^A/\\', density: 0.42, color: 'rock',   build: false, clear: false },
-    hot:    { nome: 'ZONA CALDA',    chars: '!"\'',  density: 0.24, color: 'danger', build: true,  clear: false }
-  };
-
-  /* ---------------------------------------------------------
-     ARTE ASCII DEGLI EDIFICI
-     Ogni arte deve misurare esattamente (w*TILE_W) x (h*TILE_H).
-     --------------------------------------------------------- */
-
-  /* --- 1x1 : 5 x 3 --- */
-  var ART = {
-    nucleo: [
-      '   /**\\   ',
-      '  /____\\  ',
-      ' |[NEXUS]|',
-      ' |[]  []| ',
-      ' |__||__| ',
-      '  ^^^^^^  '
-    ],
-    rifugio: [
-      ' /^\\ ',
-      '[o o]',
-      '[___]'
-    ],
-    solare: [
-      ' /=\\ ',
-      '[###]',
-      ' |_| '
-    ],
-    eolica: [
-      ' \\|/ ',
-      '  #  ',
-      ' /#\\ '
-    ],
-    condensatore: [
-      ' ,-, ',
-      '(~~~)',
-      ' |_| '
-    ],
-    raccoglitore: [
-      ' [%] ',
-      '/###\\',
-      '|_._|'
-    ],
-    micofarm: [
-      ' ooo ',
-      '(vvv)',
-      '[___]'
-    ],
-    antenna: [
-      '  Y  ',
-      ' /|\\ ',
-      '[_|_]'
-    ],
-    torretta: [
-      ' <O> ',
-      ' /X\\ ',
-      '[___]'
-    ],
-    muro: [
-      '_____',
-      '|#|#|',
-      '|#|#|'
-    ],
-    filtro: [
-      ' (=) ',
-      '[ooo]',
-      ' \\_/ '
-    ],
-    monumento: [
-      '  A  ',
-      ' /|\\ ',
-      '[===]'
-    ],
-    deposito: [
-      ' ___ ',
-      '|[#]|',
-      '|___|'
-    ],
-    /* --- 2x1 : 10 x 3 --- */
-    idroponica: [
-      ' ________ ',
-      '|~vvvvvv~|',
-      '|__|__|__|'
-    ],
-    fonderia: [
-      '  ()  ()  ',
-      ' /######\\ ',
-      '|__MELT__|'
-    ],
-    pozzo: [
-      '   ,--,   ',
-      '  (|__|)  ',
-      ' [_/~~\\_] '
-    ],
-    laboratorio: [
-      ' ,------, ',
-      ' |[o][o]| ',
-      ' |_LAB___|'
-    ],
-    officina: [
-      ' <=><=><= ',
-      '|_DRONI__|',
-      '|__|__|__|'
-    ],
-    mercato: [
-      ' /\\/\\/\\/\\ ',
-      '|$ TRADE$|',
-      '|__|__|__|'
-    ],
-    medico: [
-      '  __++__  ',
-      ' |MEDICO| ',
-      ' |__||__| '
-    ],
-    /* --- 2x2 : 10 x 6 --- */
-    reattore: [
-      '  ______  ',
-      ' /(#**#)\\ ',
-      '| |<()>| |',
-      '| |_##_| |',
-      ' \\______/ ',
-      '  ||  ||  '
-    ],
-    arcologia: [
-      '   ,--,   ',
-      '  /::::\\  ',
-      ' /::::::\\ ',
-      '|[]||[]|| ',
-      '|[]||[]|| ',
-      '|________|'
-    ],
-    rigeneratore: [
-      '   \\||/   ',
-      '  <=()=>  ',
-      ' [_/~~\\_] ',
-      ' |ATMOS_| ',
-      ' |__||__| ',
-      '  ~~~~~~  '
-    ],
-    /* --- 3x2 : 15 x 6 --- */
-    spazioporto: [
-      '      /\\       ',
-      '     /||\\      ',
-      '  __/_||_\\__   ',
-      ' [==LANCIO==]  ',
-      ' |__|____|__|  ',
-      '  ^^^^ ^^^^    '
-    ]
+    ash:    { nome: 'CENERE', color: 'ash',    build: true,  clear: false },
+    dust:   { nome: 'POLVERE ROSSA', color: 'dust',   build: true,  clear: false },
+    rubble: { nome: 'MACERIE', color: 'scrap',  build: false, clear: true  },
+    crater: { nome: 'CRATERE', color: 'dim',    build: true,  clear: false },
+    pool:   { nome: 'POZZA TOSSICA', color: 'toxic',  build: false, clear: false },
+    rock:   { nome: 'SPERONE', color: 'rock',   build: false, clear: false },
+    hot:    { nome: 'ZONA CALDA', color: 'danger', build: true,  clear: false }
   };
 
   /* ---------------------------------------------------------
@@ -193,7 +42,7 @@
   var BUILDINGS = [
     {
       id: 'nucleo', nome: 'NUCLEO DI COMANDO', cat: 'COMANDO', glyph: '@',
-      w: 2, h: 2, color: 'core', art: ART.nucleo, maxLvl: 10, unique: true,
+      w: 2, h: 2, color: 'core', maxLvl: 10, unique: true,
       unlock: 0, cost: { rtm: 0 },
       jobs: 0, housing: 10, produce: { rtm: 0.6, nrg: 18 }, consume: {},
       storage: { rtm: 0, h2o: 0, bio: 0, leg: 0, dat: 0 },
@@ -202,7 +51,7 @@
     },
     {
       id: 'strada', nome: 'TRACCIATO', cat: 'LOGISTICA', glyph: '+',
-      w: 1, h: 1, color: 'road', art: null, maxLvl: 1, road: true,
+      w: 1, h: 1, color: 'road', maxLvl: 1, road: true,
       limiti: [20, 40, 60, 80, 100, 120, 140, 160, 180, 220],
       unlock: 1, cost: { rtm: 5 },
       jobs: 0, housing: 0, produce: {}, consume: {},
@@ -211,8 +60,8 @@
     },
     {
       id: 'rifugio', nome: 'RIFUGIO PRESSURIZZATO', cat: 'ABITATIVO', glyph: 'n',
-      w: 1, h: 1, color: 'house', art: ART.rifugio, maxLvl: 5,
-      limiti: [4, 7, 10, 13, 16, 19, 22, 25, 28, 32],
+      w: 1, h: 1, color: 'house', maxLvl: 5,
+      limiti: [5, 8, 12, 17, 27, 30, 34, 38, 42, 46],
       unlock: 1, cost: { rtm: 30 },
       jobs: 0, housing: 6, produce: {}, consume: { nrg: 1 },
       contamina: 0, morale: 0, difesa: 0,
@@ -220,16 +69,16 @@
     },
     {
       id: 'solare', nome: 'ARRAY FOTOVOLTAICO', cat: 'ENERGIA', glyph: 's',
-      w: 1, h: 1, color: 'energy', art: ART.solare, maxLvl: 5,
-      limiti: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+      w: 1, h: 1, color: 'energy', maxLvl: 5,
+      limiti: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
       unlock: 1, cost: { rtm: 45 },
-      jobs: 0, housing: 0, produce: { nrg: 7 }, consume: {},
+      jobs: 0, housing: 0, produce: { nrg: 10 }, consume: {},
       contamina: 0, morale: 0, difesa: 0,
       desc: 'Pannelli recuperati e ricalibrati. Il cielo e coperto di ceneri: rendono un terzo del nominale, ma non chiedono carburante.'
     },
     {
       id: 'raccoglitore', nome: 'RACCOGLITORE DI ROTTAMI', cat: 'INDUSTRIA', glyph: 'r',
-      w: 1, h: 1, color: 'scrap', art: ART.raccoglitore, maxLvl: 5,
+      w: 1, h: 1, color: 'scrap', maxLvl: 5,
       limiti: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
       unlock: 1, cost: { rtm: 25 },
       jobs: 1, housing: 0, produce: { rtm: 1.2 }, consume: { nrg: 3 },
@@ -239,7 +88,7 @@
     },
     {
       id: 'condensatore', nome: 'CONDENSATORE ATMOSFERICO', cat: 'ACQUA', glyph: 'c',
-      w: 1, h: 1, color: 'water', art: ART.condensatore, maxLvl: 5,
+      w: 1, h: 1, color: 'water', maxLvl: 5,
       limiti: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
       unlock: 1, cost: { rtm: 35 },
       jobs: 1, housing: 0, produce: { h2o: 1.0 }, consume: { nrg: 3 },
@@ -248,7 +97,7 @@
     },
     {
       id: 'micofarm', nome: 'MICO-FARM', cat: 'CIBO', glyph: 'm',
-      w: 1, h: 1, color: 'food', art: ART.micofarm, maxLvl: 5,
+      w: 1, h: 1, color: 'food', maxLvl: 5,
       limiti: [2, 3, 4, 5, 6, 7, 8, 8, 8, 8],
       unlock: 1, cost: { rtm: 30 },
       jobs: 1, housing: 0, produce: { bio: 0.8 }, consume: { nrg: 2, h2o: 0.2 },
@@ -257,7 +106,7 @@
     },
     {
       id: 'deposito', nome: 'DEPOSITO CORAZZATO', cat: 'LOGISTICA', glyph: 'd',
-      w: 1, h: 1, color: 'struct', art: ART.deposito, maxLvl: 5,
+      w: 1, h: 1, color: 'struct', maxLvl: 5,
       limiti: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       unlock: 1, cost: { rtm: 70 },
       jobs: 0, housing: 0, produce: {}, consume: { nrg: 1 },
@@ -267,16 +116,16 @@
     },
     {
       id: 'eolica', nome: 'TURBINA EOLICA', cat: 'ENERGIA', glyph: 'w',
-      w: 1, h: 1, color: 'energy', art: ART.eolica, maxLvl: 5,
-      limiti: [0, 2, 3, 5, 7, 9, 11, 13, 15, 18],
+      w: 1, h: 1, color: 'energy', maxLvl: 5,
+      limiti: [0, 3, 6, 9, 12, 15, 18, 21, 24, 27],
       unlock: 2, cost: { rtm: 70 },
-      jobs: 0, housing: 0, produce: { nrg: 11 }, consume: {},
+      jobs: 0, housing: 0, produce: { nrg: 16 }, consume: {},
       contamina: 0, morale: 0, difesa: 0,
       desc: 'I venti di cenere non si fermano mai. La pala e in fibra riciclata e ulula di notte: i coloni la chiamano la Vedova.'
     },
     {
       id: 'pozzo', nome: 'POZZO PROFONDO', cat: 'ACQUA', glyph: 'p',
-      w: 2, h: 1, color: 'water', art: ART.pozzo, maxLvl: 5,
+      w: 2, h: 1, color: 'water', maxLvl: 5,
       limiti: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       unlock: 2, cost: { rtm: 110, leg: 5 },
       jobs: 2, housing: 0, produce: { h2o: 3.6 }, consume: { nrg: 7 },
@@ -286,7 +135,7 @@
     },
     {
       id: 'idroponica', nome: 'SERRA IDROPONICA', cat: 'CIBO', glyph: 'h',
-      w: 2, h: 1, color: 'food', art: ART.idroponica, maxLvl: 5,
+      w: 2, h: 1, color: 'food', maxLvl: 5,
       limiti: [0, 1, 2, 3, 4, 6, 8, 10, 12, 14],
       unlock: 2, cost: { rtm: 120, leg: 10 },
       jobs: 3, housing: 0, produce: { bio: 3.2 }, consume: { nrg: 9, h2o: 1.0 },
@@ -296,7 +145,7 @@
     },
     {
       id: 'antenna', nome: 'RELE DATI', cat: 'SCIENZA', glyph: 'y',
-      w: 1, h: 1, color: 'data', art: ART.antenna, maxLvl: 5,
+      w: 1, h: 1, color: 'data', maxLvl: 5,
       limiti: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       unlock: 2, cost: { rtm: 90, leg: 8 },
       jobs: 1, housing: 0, produce: { dat: 0.16 }, consume: { nrg: 5 },
@@ -305,7 +154,7 @@
     },
     {
       id: 'torretta', nome: 'TORRETTA AUTOMATICA', cat: 'DIFESA', glyph: 't',
-      w: 1, h: 1, color: 'danger', art: ART.torretta, maxLvl: 5,
+      w: 1, h: 1, color: 'danger', maxLvl: 5,
       limiti: [0, 2, 3, 4, 6, 8, 10, 12, 14, 16],
       unlock: 2, cost: { rtm: 80, leg: 15 },
       jobs: 1, housing: 0, produce: {}, consume: { nrg: 4 },
@@ -314,7 +163,7 @@
     },
     {
       id: 'muro', nome: 'BARRIERA BLINDATA', cat: 'DIFESA', glyph: '=',
-      w: 1, h: 1, color: 'struct', art: ART.muro, maxLvl: 3,
+      w: 1, h: 1, color: 'struct', maxLvl: 3,
       limiti: [0, 10, 20, 30, 45, 60, 75, 90, 105, 125],
       unlock: 2, cost: { rtm: 20 },
       jobs: 0, housing: 0, produce: {}, consume: {},
@@ -323,7 +172,7 @@
     },
     {
       id: 'officina', nome: 'OFFICINA DRONI', cat: 'INDUSTRIA', glyph: 'o',
-      w: 2, h: 1, color: 'scrap', art: ART.officina, maxLvl: 5,
+      w: 2, h: 1, color: 'scrap', maxLvl: 5,
       limiti: [0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
       unlock: 3, cost: { rtm: 140, leg: 20 },
       jobs: 3, housing: 0, produce: { rtm: 3.6 }, consume: { nrg: 9 },
@@ -332,7 +181,7 @@
     },
     {
       id: 'fonderia', nome: 'FONDERIA A ARCO', cat: 'INDUSTRIA', glyph: 'f',
-      w: 2, h: 1, color: 'alloy', art: ART.fonderia, maxLvl: 5,
+      w: 2, h: 1, color: 'alloy', maxLvl: 5,
       limiti: [0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
       unlock: 3, cost: { rtm: 160 },
       jobs: 4, housing: 0, produce: { leg: 0.85 }, consume: { nrg: 12, rtm: 2.2 },
@@ -341,7 +190,7 @@
     },
     {
       id: 'laboratorio', nome: 'LABORATORIO XENO', cat: 'SCIENZA', glyph: 'l',
-      w: 2, h: 1, color: 'data', art: ART.laboratorio, maxLvl: 5,
+      w: 2, h: 1, color: 'data', maxLvl: 5,
       limiti: [0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
       unlock: 3, cost: { rtm: 190, leg: 25 },
       jobs: 4, housing: 0, produce: { dat: 0.55 }, consume: { nrg: 13, h2o: 0.3 },
@@ -351,16 +200,16 @@
     },
     {
       id: 'filtro', nome: 'TORRE DI FILTRAGGIO', cat: 'AMBIENTE', glyph: 'F',
-      w: 1, h: 1, color: 'toxic', art: ART.filtro, maxLvl: 5,
+      w: 1, h: 1, color: 'toxic', maxLvl: 5,
       limiti: [0, 1, 2, 3, 5, 7, 9, 11, 13, 15],
-      unlock: 2, cost: { rtm: 100, leg: 12 },
+      unlock: 2, cost: { rtm: 110 },
       jobs: 1, housing: 0, produce: {}, consume: { nrg: 6 },
       assorbe: 4.0, contamina: 0, morale: 1, difesa: 0,
       desc: 'Colonne di zeoliti che catturano particolato e isotopi. Riduce la contaminazione del settore, che avvelena morale e coloni.'
     },
     {
       id: 'mercato', nome: 'MERCATO NERO', cat: 'LOGISTICA', glyph: '$',
-      w: 2, h: 1, color: 'gold', art: ART.mercato, maxLvl: 5,
+      w: 2, h: 1, color: 'gold', maxLvl: 5,
       limiti: [0, 0, 0, 1, 2, 2, 3, 3, 4, 4],
       unlock: 4, cost: { rtm: 150, leg: 15 },
       jobs: 2, housing: 0, produce: { rtm: 2.6, bio: 0.4 }, consume: { nrg: 6 },
@@ -369,7 +218,7 @@
     },
     {
       id: 'medico', nome: 'CENTRO MEDICO', cat: 'ABITATIVO', glyph: 'C',
-      w: 2, h: 1, color: 'house', art: ART.medico, maxLvl: 5,
+      w: 2, h: 1, color: 'house', maxLvl: 5,
       limiti: [0, 0, 0, 1, 2, 3, 4, 5, 6, 7],
       unlock: 4, cost: { rtm: 170, leg: 20 },
       jobs: 3, housing: 0, produce: {}, consume: { nrg: 10, h2o: 0.6 },
@@ -378,7 +227,7 @@
     },
     {
       id: 'monumento', nome: 'MONOLITE DELLA MEMORIA', cat: 'AMBIENTE', glyph: 'A',
-      w: 1, h: 1, color: 'gold', art: ART.monumento, maxLvl: 3,
+      w: 1, h: 1, color: 'gold', maxLvl: 3,
       limiti: [0, 0, 0, 0, 1, 1, 2, 2, 3, 3],
       unlock: 5, cost: { rtm: 220, leg: 45 },
       jobs: 0, housing: 0, produce: {}, consume: {},
@@ -387,16 +236,16 @@
     },
     {
       id: 'reattore', nome: 'REATTORE A FUSIONE', cat: 'ENERGIA', glyph: 'R',
-      w: 2, h: 2, color: 'energy', art: ART.reattore, maxLvl: 5,
-      limiti: [0, 0, 0, 0, 1, 1, 2, 3, 4, 5],
+      w: 2, h: 2, color: 'energy', maxLvl: 5,
+      limiti: [0, 0, 0, 0, 1, 2, 3, 5, 7, 9],
       unlock: 5, tech: 'fusione', cost: { rtm: 420, leg: 130 },
-      jobs: 6, housing: 0, produce: { nrg: 95 }, consume: { h2o: 1.2 },
+      jobs: 6, housing: 0, produce: { nrg: 120 }, consume: { h2o: 1.2 },
       contamina: 3.5, morale: 0, difesa: 0,
       desc: 'Toroide al deuterio riportato in linea dopo ottant anni. Alimenta un distretto intero. Il pannello di controllo e ancora in una lingua che nessuno legge.'
     },
     {
       id: 'arcologia', nome: 'ARCOLOGIA', cat: 'ABITATIVO', glyph: 'H',
-      w: 2, h: 2, color: 'house', art: ART.arcologia, maxLvl: 5,
+      w: 2, h: 2, color: 'house', maxLvl: 5,
       limiti: [0, 0, 0, 0, 0, 2, 4, 6, 8, 12],
       unlock: 6, tech: 'arcologie', cost: { rtm: 620, leg: 210 },
       jobs: 2, housing: 45, produce: {}, consume: { nrg: 26, h2o: 2.0 },
@@ -405,7 +254,7 @@
     },
     {
       id: 'rigeneratore', nome: 'RIGENERATORE ATMOSFERICO', cat: 'AMBIENTE', glyph: 'O',
-      w: 2, h: 2, color: 'toxic', art: ART.rigeneratore, maxLvl: 5,
+      w: 2, h: 2, color: 'toxic', maxLvl: 5,
       limiti: [0, 0, 0, 0, 0, 0, 1, 2, 3, 4],
       unlock: 7, tech: 'nanofiltri', cost: { rtm: 540, leg: 170 },
       jobs: 5, housing: 0, produce: {}, consume: { nrg: 32, h2o: 1.0 },
@@ -414,7 +263,7 @@
     },
     {
       id: 'spazioporto', nome: 'SPAZIOPORTO ESODO', cat: 'COMANDO', glyph: 'X',
-      w: 3, h: 2, color: 'core', art: ART.spazioporto, maxLvl: 1, unique: true,
+      w: 3, h: 2, color: 'core', maxLvl: 1, unique: true,
       limiti: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       unlock: 10, tech: 'esodo', cost: { rtm: 18000, leg: 4500, dat: 900 },
       jobs: 20, housing: 0, produce: {}, consume: { nrg: 90, h2o: 3, leg: 1.5 },
@@ -493,8 +342,6 @@
   ];
 
   global.DATA = {
-    TILE_W: TILE_W,
-    TILE_H: TILE_H,
     RESOURCES: RESOURCES,
     BASE_CAP: BASE_CAP,
     TERRAIN: TERRAIN,

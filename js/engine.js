@@ -67,27 +67,12 @@
           }
           tiles.push({
             t: t,
-            p: this.patternTerreno(t, rnd),
             b: -1,      /* indice edificio che occupa la cella, -1 = vuota */
             cl: false   /* macerie sgomberate */
           });
         }
       }
       return tiles;
-    },
-
-    /* Disegna il pattern ASCII fisso di una cella di terreno. */
-    patternTerreno: function (tipo, rnd) {
-      var def = D.TERRAIN[tipo];
-      var rows = [];
-      for (var y = 0; y < D.TILE_H; y++) {
-        var s = '';
-        for (var x = 0; x < D.TILE_W; x++) {
-          s += (rnd() < def.density) ? def.chars.charAt(Math.floor(rnd() * def.chars.length)) : ' ';
-        }
-        rows.push(s);
-      }
-      return rows;
     },
 
     /* =========================================================
@@ -301,7 +286,6 @@
       var t = this.tile(x, y);
       if (!t || t.t !== 'rubble' || t.cl) return { ok: false, motivo: 'NIENTE DA SGOMBERARE' };
       t.cl = true;
-      t.p = this.patternTerreno('ash', this.rng);
       var bottino = 12 + Math.floor(this.rng() * 14);
       this.aggiungi('rtm', bottino);
       var msg = 'Macerie sgomberate: +' + bottino + ' RTM';

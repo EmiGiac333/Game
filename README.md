@@ -11,7 +11,7 @@
 
 # NEXUS-7
 
-City builder in **grafica ASCII pura**, ambientato in un futuro post-apocalittico.
+City builder con **sprite pixelati**, ambientato in un futuro post-apocalittico.
 
 Anno 2187. Otto persone si svegliano in un modulo di atterraggio, in mezzo a
 quaranta chilometri di cenere. In orbita, un segnale ripete una sola parola:
@@ -87,7 +87,7 @@ manca. Un asterisco sulla tab STORIA segnala che c'è qualcosa di nuovo da legge
 | Spostarsi sulla mappa | trascina con un dito |
 | Selezionare una cella | tocca |
 | Confermare (scansiona / costruisci / sgombera) | tocca **di nuovo** la stessa cella |
-| Zoom | `[-]` `[+]` in basso a destra — sotto il minimo si passa alla **mappa tattica** |
+| Zoom | `[-]` `[+]` in basso a destra — al minimo la **vista tattica** adatta tutto il settore allo schermo |
 | Velocità | il pulsante `x1` in alto a destra cicla `|| → x1 → x2 → x4` |
 | Pannelli | barra in basso: COSTRUISCI, SCANSIONE, RICERCA, CITTÀ, STORIA, DIARIO, MENU |
 
@@ -176,8 +176,8 @@ alla rovescia — e difendilo.
 
 ## Scansione degli edifici
 
-Il pannello **SCANSIONE** è lo zoom sulla singola struttura: arte ASCII ingrandita e
-incorniciata, descrizione, e tutte le caratteristiche in chiaro —
+Il pannello **SCANSIONE** è lo zoom sulla singola struttura: lo sprite a piena
+risoluzione (fino a 1536×1024), descrizione, e tutte le caratteristiche in chiaro —
 
 - integrità, resa totale, stato operativo;
 - produzione e consumi effettivi per ciclo (con valore base a confronto);
@@ -192,20 +192,49 @@ incorniciata, descrizione, e tutte le caratteristiche in chiaro —
 ```
 index.html              shell dell'app
 css/style.css           tema terminale CRT, layout mobile-first
-js/data.js              risorse, terreni, 25 edifici con arte ASCII, tecnologie, livelli, eventi
+js/data.js              risorse, terreni, 25 edifici, tecnologie, livelli, eventi
+js/sprites.js           caricamento sprite e cache per livello di zoom
 js/story.js             10 capitoli, 14 frammenti d'archivio, 2 epiloghi
 js/tutorial.js          14 passi guidati con obiettivi verificati sullo stato di gioco
 js/engine.js            stato, generazione mappa, simulazione economica, eventi, salvataggio
-js/render.js            renderer ASCII (mappa tattica e di dettaglio)
+js/render.js            renderer su canvas: terreno, perimetro, strutture, cursore
 js/ui.js                HUD, pannelli, input touch, ciclo di gioco
 js/main.js              avvio e registrazione service worker
-sw.js                   cache offline
+sprites/                61 sprite PNG + elenco.json per la cache offline
+tools/                  generatore della pixel art (pixel.py, edifici_*.py, terreni.py)
+sw.js                   cache offline (codice + sprite)
 manifest.webmanifest    installazione come app Android
 ```
 
 Nessuna dipendenza, nessun passo di build: sono file statici.
 
-**Vincolo grafico:** ogni carattere disegnato appartiene all'ASCII stampabile (32–126).
-Niente box-drawing Unicode né emoji, perché su Android hanno larghezze incoerenti e
-spezzerebbero l'allineamento della griglia monospazio.
-Ogni arte misura esattamente `larghezza×5` per `altezza×3` caratteri.
+### Grafica
+
+Gli sprite sono **pixel art generata da codice**, non immagini disegnate a mano:
+`tools/` contiene il motore di disegno e le definizioni di ogni struttura, quindi
+l'arte è riproducibile e modificabile.
+
+```bash
+python3 tools/genera_sprite.py     # rigenera i 61 sprite in sprites/
+```
+
+L'arte è autorata a **32 pixel logici per cella di mappa** ed esportata ingrandita
+×16: una struttura 1×1 esce a **512×512**, una 2×1 a 1024×512, una 2×2 a 1024×1024,
+lo Spazioporto 3×2 a 1536×1024. In tutto 61 file per 344 KB.
+
+512 è un multiplo esatto di 32, e i tre livelli di zoom (16, 32 e 64 px per cella)
+sono tutti divisori esatti di 512: il ridimensionamento non spezza mai un pixel e
+l'arte resta netta a ogni scala, con `image-rendering: pixelated` e
+`imageSmoothingEnabled = false`.
+
+All'avvio il gioco costruisce una copia in cache per ogni livello di zoom e poi
+**rilascia gli originali da 512**: tenerli tutti decodificati costerebbe circa
+50 MB, troppi per un telefono. Le copie in cache stanno in poche centinaia di KB.
+
+La plancia è disegnata su `<canvas>`: terreno (7 tipi × 3 varianti), perimetro
+del settore, griglia, strutture con indicatore di stato e cursore. I tracciati
+hanno 16 varianti e si collegano da soli ai vicini.
+
+L'interfaccia resta volutamente un **terminale testuale** — pannelli, barre e
+diario in monospazio — perché è l'identità del gioco: sono le *grafiche* a essere
+diventate sprite, non la plancia di comando.

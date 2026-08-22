@@ -6,17 +6,15 @@
   'use strict';
 
   var D = global.DATA, E = global.Engine, R = global.Render;
-  var ST = global.Story, TU = global.Tutorial;
+  var ST = global.Story, TU = global.Tutorial, SP = global.Sprites;
   var $ = function (s) { return document.querySelector(s); };
 
-  /* Passi di zoom: indice 0 = mappa tattica, 1..5 = dettaglio. */
+  /* Passi di zoom: lato della cella in pixel. Ogni valore divide 512 per un
+     intero, quindi gli sprite si rimpiccioliscono senza spezzare i pixel. */
   var ZOOM = [
-    { modo: 'tattica',   font: 17, nome: 'TATTICA' },
-    { modo: 'dettaglio', font: 7,  nome: 'x1' },
-    { modo: 'dettaglio', font: 9,  nome: 'x2' },
-    { modo: 'dettaglio', font: 11, nome: 'x3' },
-    { modo: 'dettaglio', font: 14, nome: 'x4' },
-    { modo: 'dettaglio', font: 18, nome: 'x5' }
+    { px: 16, nome: 'TATTICA', adatta: true },   /* tutta la mappa nello schermo */
+    { px: 32, nome: 'x1' },
+    { px: 64, nome: 'x2' }
   ];
   var VELOCITA = [0, 1, 2, 4];
 
@@ -34,7 +32,7 @@
   }
 
   var UI = {
-    zoom: 3,
+    zoom: 1,
     velocita: 1,
     selezione: null,      /* edificio selezionato */
     pannello: null,
@@ -51,13 +49,14 @@
       var self = this;
       this.mappa = $('#map');
       this.wrap = $('#mapwrap');
+      R.imposta(this.mappa);
 
       R.cursore.x = Math.floor(E.MAP_W / 2);
       R.cursore.y = Math.floor(E.MAP_H / 2);
 
       this.collegaEventi();
       E.on('mappa', function () { self.disegnaMappa(); });
-      E.on('log', function () { if (self.pannello === 'diario') self.apri('diario'); });
+      E.on('log', function () { if (self.pannello === 'diario') self.rinfrescaPannello(); });
       E.on('evento', function (ev) { self.toast('[' + ev.nome + '] ' + ev.dettaglio, ev.cls); });
       E.on('livello', function (l) { self.bannerLivello(l); });
       E.on('vittoria', function () { self.finale(true); });
@@ -127,13 +126,12 @@
 
     tapMappa: function (cx, cy) {
       var r = this.mappa.getBoundingClientRect();
-      var z = ZOOM[this.zoom];
-      var cols = z.modo === 'tattica' ? E.MAP_W : E.MAP_W * D.TILE_W;
-      var rows = z.modo === 'tattica' ? E.MAP_H : E.MAP_H * D.TILE_H;
-      var cw = r.width / cols, chh = r.height / rows;
-      var col = Math.floor((cx - r.left) / cw), row = Math.floor((cy - r.top) / chh);
-      var tx = z.modo === 'tattica' ? col : Math.floor(col / D.TILE_W);
-      var ty = z.modo === 'tattica' ? row : Math.floor(row / D.TILE_H);
+      if (!r.width || !r.height) return;
+      /* il canvas puo' essere mostrato a una scala diversa dalla sua
+         risoluzione: converto prima in pixel del canvas, poi in celle. */
+      var sx = this.mappa.width / r.width, sy = this.mappa.height / r.height;
+      var tx = Math.floor((cx - r.left) * sx / R.px);
+      var ty = Math.floor((cy - r.top) * sy / R.px);
       if (!E.inMappa(tx, ty)) return;
       this.mosso = true;   /* qualunque tocco sulla mappa conta come interazione */
       var stessaCella = (R.cursore.x === tx && R.cursore.y === ty);
@@ -208,19 +206,19 @@
         case 'potenzia-nucleo':
           r = E.avviaPotenziamentoNucleo();
           this.toast(r.ok ? 'Cantiere aperto sul Nucleo.' : r.motivo, r.ok ? 'good' : 'bad');
-          if (this.pannello) this.apri(this.pannello);
+          this.rinfrescaPannello();
           this.aggiornaHud();
           break;
         case 'potenzia':
           r = E.potenzia(this.selezione);
           this.toast(r.ok ? 'Potenziamento completato.' : r.motivo, r.ok ? 'good' : 'bad');
-          if (this.pannello === 'scansione') this.apri('scansione');
+          this.rinfrescaPannello();
           this.aggiornaHud();
           break;
         case 'ripara':
           r = E.ripara(this.selezione);
           this.toast(r.ok ? 'Struttura riparata.' : r.motivo, r.ok ? 'good' : 'bad');
-          if (this.pannello === 'scansione') this.apri('scansione');
+          this.rinfrescaPannello();
           this.aggiornaHud();
           break;
         case 'demolisci':
@@ -235,13 +233,13 @@
         case 'ricerca':
           r = E.ricerca(arg);
           this.toast(r.ok ? 'Progetto completato.' : r.motivo, r.ok ? 'good' : 'bad');
-          this.apri('ricerca'); this.aggiornaHud();
+          this.rinfrescaPannello(); this.aggiornaHud();
           break;
 
         case 'lancio':
           r = E.avviaLancio();
           this.toast(r.ok ? 'CONTO ALLA ROVESCIA AVVIATO.' : r.motivo, r.ok ? 'good' : 'bad');
-          if (this.pannello === 'scansione') this.apri('scansione');
+          this.rinfrescaPannello();
           break;
 
         case 'tut-riprendi':
@@ -261,7 +259,7 @@
           break;
         case 'storia-voce':
           this.storiaAperta = (this.storiaAperta === arg) ? null : arg;
-          this.apri('storia');
+          this.rinfrescaPannello();
           break;
 
         case 'salva':
@@ -295,28 +293,27 @@
        ========================================================= */
     applicaZoom: function () {
       var z = ZOOM[this.zoom];
-      R.modo = z.modo;
-      this.mappa.style.fontSize = z.font + 'px';
-      /* in tattica la mappa sta tutta nello schermo: la centro.
-         In dettaglio no, altrimenti lo scorrimento non raggiunge il bordo sinistro. */
-      this.wrap.classList.toggle('tattica', z.modo === 'tattica');
+      R.px = z.px;
+      R.dimensiona();
+      /* In panoramica il canvas viene adattato alla larghezza disponibile,
+         cosi' il settore si vede tutto invece di restare un francobollo.
+         Da vicino resta a risoluzione nativa e si scorre. */
+      this.mappa.style.width = z.adatta ? '100%' : '';
+      this.mappa.style.height = z.adatta ? 'auto' : '';
+      this.wrap.classList.toggle('tattica', !!z.adatta);
       var l = $('#zoomlab'); if (l) l.textContent = z.nome;
     },
 
     disegnaMappa: function () {
-      this.mappa.innerHTML = R.disegna();
+      R.disegna();
     },
 
     centraSuCursore: function () {
-      var z = ZOOM[this.zoom];
-      var cols = z.modo === 'tattica' ? E.MAP_W : E.MAP_W * D.TILE_W;
-      var rows = z.modo === 'tattica' ? E.MAP_H : E.MAP_H * D.TILE_H;
       var r = this.mappa.getBoundingClientRect();
-      var cw = r.width / cols, chh = r.height / rows;
-      var px = (R.cursore.x * (z.modo === 'tattica' ? 1 : D.TILE_W)) * cw;
-      var py = (R.cursore.y * (z.modo === 'tattica' ? 1 : D.TILE_H)) * chh;
-      this.wrap.scrollLeft = px - this.wrap.clientWidth / 2;
-      this.wrap.scrollTop = py - this.wrap.clientHeight / 2;
+      if (!r.width) return;
+      var scala = r.width / this.mappa.width;          /* px schermo per px canvas */
+      this.wrap.scrollLeft = (R.cursore.x + 0.5) * R.px * scala - this.wrap.clientWidth / 2;
+      this.wrap.scrollTop = (R.cursore.y + 0.5) * R.px * scala - this.wrap.clientHeight / 2;
     },
 
     /* =========================================================
@@ -452,21 +449,31 @@
     /* =========================================================
        PANNELLI
        ========================================================= */
+    corpoPannello: function (nome) {
+      if (nome === 'costruisci') return this.pCostruisci();
+      if (nome === 'scansione') return this.pScansione();
+      if (nome === 'ricerca') return this.pRicerca();
+      if (nome === 'citta') return this.pCitta();
+      if (nome === 'diario') return this.pDiario();
+      if (nome === 'storia') return this.pStoria();
+      if (nome === 'manuale') return this.pManuale();
+      if (nome === 'menu') return this.pMenu();
+      return '';
+    },
+
+    /* Ridisegna il pannello aperto senza contarlo come una nuova apertura:
+       il ciclo di gioco lo chiama ogni secondo per aggiornare i valori. */
+    rinfrescaPannello: function () {
+      if (!this.pannello) return;
+      $('#panel').innerHTML = this.corpoPannello(this.pannello);
+    },
+
     apri: function (nome) {
       this.pannello = nome;
       if (nome === 'scansione') this.visto.scansione = true;
       if (nome === 'ricerca') this.visto.ricerca = true;
       if (nome === 'storia') ST.segnaTuttoLetto(E.state);
-      var corpo = '';
-      if (nome === 'costruisci') corpo = this.pCostruisci();
-      else if (nome === 'scansione') corpo = this.pScansione();
-      else if (nome === 'ricerca') corpo = this.pRicerca();
-      else if (nome === 'citta') corpo = this.pCitta();
-      else if (nome === 'diario') corpo = this.pDiario();
-      else if (nome === 'storia') corpo = this.pStoria();
-      else if (nome === 'manuale') corpo = this.pManuale();
-      else if (nome === 'menu') corpo = this.pMenu();
-      $('#panel').innerHTML = corpo;
+      $('#panel').innerHTML = this.corpoPannello(nome);
       $('#panel').classList.add('aperto');
       this.verificaTutorial();
       document.querySelectorAll('#tabs .btn').forEach(function (b) {
@@ -525,7 +532,7 @@
 
           h += '<div class="voce ' + (sbl ? (pieno ? 'bloccata' : (pago ? '' : 'nopay')) : 'bloccata') + '" ' +
                (sbl && pago && !pieno ? 'data-az="scegli" data-arg="' + def.id + '"' : '') + '>' +
-               '<div class="v-a"><span class="v-g c-' + def.color + '">' + esc(def.glyph) + '</span>' +
+               '<div class="v-a"><img class="v-g" src="' + SP.urlEdificio(def.id, 15) + '" alt="">' +
                '<b>' + def.nome + '</b> <span class="dim">' + def.w + 'x' + def.h + '</span>' +
                (sbl ? '<span class="conta ' + (pieno ? 'no' : '') + '">' + quante + '/' + lim + '</span>' : '') +
                '</div>' +
@@ -545,13 +552,8 @@
       var def = D.byId(b.tipo), st = E.state;
 
       /* arte ingrandita, incorniciata in ASCII */
-      /* Zoom tipografico: l arte resta identica e le scritte interne
-         ([NEXUS], LAB, MEDICO...) restano leggibili. Duplicare i caratteri
-         le renderebbe illeggibili. */
-      var arte = def.road ? R.arteStrada(b.x, b.y) : def.art;
-      var larg = arte && arte.length ? arte[0].length : 10;
-      var cornice = '+' + new Array(larg + 3).join('-') + '+';
-      var telaio = [cornice].concat((arte || []).map(function (r) { return '| ' + r + ' |'; })).concat([cornice]);
+      /* Lo sprite a piena risoluzione: e' il vero zoom sulla struttura. */
+      var urlSprite = SP.urlEdificio(b.tipo, def.road ? R.bitStrada(b.x, b.y) : 0);
 
       var bon = E.bonusAdiacenza(b);
       var mult = E.multTech(b.tipo);
@@ -561,7 +563,8 @@
       var h = this.testata('SCANSIONE STRUTTURA', 'MK-' + b.lvl + '/' + def.maxLvl);
       var tettoMk = E.maxLvlDi(def);
       h += '<div class="scroll">';
-      h += '<pre class="artebig c-' + def.color + '">' + esc(telaio.join('\n')) + '</pre>';
+      h += '<div class="artebig"><img src="' + urlSprite + '" alt="' + esc(def.nome) +
+           '" style="width:' + (def.w >= def.h ? '82%' : (82 * def.w / def.h) + '%') + '"></div>';
       h += '<div class="s-nome c-' + def.color + '">' + def.nome + '</div>';
       h += '<div class="s-sub dim">' + def.cat + ' -- SETTORE [' + b.x + ',' + b.y + '] -- ' + def.w + 'x' + def.h + '</div>';
       h += '<p class="lore">' + esc(def.desc) + '</p>';
@@ -841,7 +844,7 @@
         '<p><b>Spostarsi:</b> trascina la mappa con un dito.<br>' +
         '<b>Selezionare:</b> tocca una cella.<br>' +
         '<b>Confermare:</b> tocca <i>di nuovo</i> la stessa cella (scansiona un edificio, conferma una costruzione, sgombera macerie).<br>' +
-        '<b>Zoom:</b> i tasti [-] e [+] in basso a destra. Sotto il minimo si passa alla <b>mappa tattica</b>, che mostra tutto il settore in un colpo d occhio con un carattere per cella.<br>' +
+        '<b>Zoom:</b> i tasti [-] e [+] in basso a destra. Al minimo si passa alla <b>vista tattica</b>, che adatta tutto il settore allo schermo.<br>' +
         '<b>Velocita:</b> il tasto in alto a destra cicla fra pausa, x1, x2 e x4.</p>' +
         '<p class="dim">Con una tastiera collegata: frecce per il cursore, Invio conferma, Esc annulla, + e - per lo zoom.</p>';
 
@@ -863,12 +866,12 @@
         '<p>Il <b>morale</b> sale con cibo e acqua in eccesso, monumenti, centri medici e mercati; scende con carenze, blackout, sovraffollamento e contaminazione. Il morale moltiplica la resa di tutto (da x0,70 a x1,00).</p>';
 
       h += '<div class="cat">-- 7. TERRENO E ADIACENZE --</div>' +
-        '<p>Le <b>macerie</b> vanno sgomberate prima di costruire, e danno rottami. <b>Speroni</b> e <b>pozze tossiche</b> non sono edificabili, ma le pozze servono: il POZZO PROFONDO va costruito adiacente a una.</p>' +
+        '<p>Le <b>macerie</b> (detriti di cemento e tondini arrugginiti) vanno sgomberate prima di costruire, e danno rottami. <b>Speroni</b> e <b>pozze tossiche</b> non sono edificabili, ma le pozze servono: il POZZO PROFONDO va costruito adiacente a una.</p>' +
         '<p>Bonus di posizione:<br>' +
         '-- <b>TRACCIATO</b> adiacente: +15% a qualsiasi struttura;<br>' +
         '-- <b>RACCOGLITORE</b> vicino alle macerie: fino a +90%;<br>' +
         '-- <b>SERRA IDROPONICA</b> vicino a condensatore (+15%) o pozzo (+20%).</p>' +
-        '<p>Il pannello SCANSIONE elenca sempre i bonus attivi su quella struttura.</p>';
+        '<p>Il pannello SCANSIONE mostra lo sprite della struttura a piena risoluzione ed elenca tutti i bonus attivi su di essa.</p>';
 
       h += '<div class="cat">-- 8. POTENZIAMENTI --</div>' +
         '<p>Ogni struttura sale fino a <b>MK-5</b>: +40% di resa per grado, fino a x2,6, sullo stesso spazio. Salgono anche alloggi, difesa e capienza dei depositi. Il costo cresce del 75% a ogni grado.</p>' +
@@ -1050,7 +1053,7 @@
           E.aggiorna(self.accumulo);
           self.accumulo = 0;
           self.aggiornaHud();
-          if (self.pannello === 'citta' || self.pannello === 'scansione') self.apri(self.pannello);
+          if (self.pannello === 'citta' || self.pannello === 'scansione') self.rinfrescaPannello();
           else self.aggiornaCtx();
           if (Math.floor(E.state.ciclo) % 15 === 0) E.salva();
           self.verificaTutorial();

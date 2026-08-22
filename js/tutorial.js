@@ -26,7 +26,7 @@
     },
     {
       id: 'sgombero', titolo: 'MACERIE',
-      testo: 'Le celle di MACERIE (colore rame, piene di # e %) non sono edificabili: prima vanno sgomberate. In cambio ottieni rottami, a volte leghe o dati.',
+      testo: 'Le celle di MACERIE - blocchi di cemento e tondini arrugginiti - non sono edificabili: prima vanno sgomberate. In cambio ottieni rottami, a volte leghe o dati.',
       azione: 'Sgombera una cella di macerie',
       suggerimento: 'Tocca una cella di macerie dentro il perimetro, poi premi SGOMBERA MACERIE nella barra sotto la mappa.',
       fatto: function (E) {
@@ -79,7 +79,7 @@
     },
     {
       id: 'scansione', titolo: 'SCANSIONE',
-      testo: 'Il pannello SCANSIONE e\' lo zoom su una struttura: arte ingrandita, descrizione e TUTTI i moltiplicatori che compongono la sua resa (livello, integrita\', addetti, rete, morale, tecnologie, adiacenze).\n\nE\' il posto dove capire perche\' un edificio rende poco.',
+      testo: 'Il pannello SCANSIONE e\' lo zoom su una struttura: sprite a piena risoluzione, descrizione e TUTTI i moltiplicatori che compongono la sua resa (livello, integrita\', addetti, rete, morale, tecnologie, adiacenze).\n\nE\' il posto dove capire perche\' un edificio rende poco.',
       azione: 'Apri la SCANSIONE di un edificio',
       suggerimento: 'Tocca un edificio e premi SCANSIONE, oppure toccalo due volte.',
       alEntrare: function (ui) { ui.visto.scansione = false; },
