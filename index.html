@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NEXUS-7 :: City Builder ASCII</title>
+<meta name="description" content="City builder ASCII post-apocalittico: ricostruisci il Settore-7, gestisci risorse, sali di livello e avvia l'Esodo.">
+<meta name="theme-color" content="#0b0d0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NEXUS-7">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header id="hud">
+    <div id="hud-top"></div>
+    <div id="hud-res"></div>
+    <div id="hud-stat"></div>
+  </header>
+
+  <main id="mapwrap">
+    <canvas id="map" aria-label="Plancia del settore"></canvas>
+    <div id="mapctl">
+      <span class="btn mini" data-az="zoom" data-arg="-1">[-]</span>
+      <span class="btn mini" id="zoomlab">x3</span>
+      <span class="btn mini" data-az="zoom" data-arg="1">[+]</span>
+    </div>
+  </main>
+
+  <section id="tut"></section>
+  <section id="ctx"></section>
+
+  <nav id="tabs">
+    <span class="btn" data-az="pannello" data-arg="costruisci">COSTRUISCI</span>
+    <span class="btn" data-az="pannello" data-arg="scansione">SCANSIONE</span>
+    <span class="btn" data-az="pannello" data-arg="ricerca">RICERCA</span>
+    <span class="btn" data-az="pannello" data-arg="citta">CITTA</span>
+    <span class="btn" data-az="pannello" data-arg="storia">STORIA</span>
+    <span class="btn" data-az="pannello" data-arg="diario">DIARIO</span>
+    <span class="btn" data-az="pannello" data-arg="menu">MENU</span>
+  </nav>
+
+  <section id="panel"></section>
+</div>
+
+<div id="toasts"></div>
+
+<div id="boot">
+<pre>
+  _   _ _____ _  _ _   _ ___    ___ 
+ | \ | | ____| \/ | | | / __|  |__ \
+ |  \| |  _| |    | | | \__ \    / /
+ | |\  | |___| /\ | |_| |___/   |_| 
+ |_| \_|_____|_||_|\___/|___|   (_) 
+
+      C I T Y   B U I L D E R
+     ascii post-apocalittico
+
+</pre>
+<div class="boot-b">
+  <span class="btn ok" id="boot-continua">CONTINUA PARTITA</span>
+  <span class="btn" id="boot-nuova">NUOVA PARTITA</span>
+</div>
+<div id="boot-prog">caricamento risorse grafiche...</div>
+<p class="boot-n">Anno 2187. Dopo il Grande Silenzio.<br>
+Sei l Amministratore del Settore-7: otto coloni,<br>
+un modulo di atterraggio e quaranta chilometri di cenere.<br>
+<span class="boot-d">Una nuova partita comincia con un tutorial guidato.<br>
+Manuale e archivio restano poi nel MENU.</span></p>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/story.js"></script>
+<script src="js/tutorial.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

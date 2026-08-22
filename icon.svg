@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" fill="#0b0d0a"/>
+  <rect x="6" y="6" width="180" height="180" fill="none" stroke="#2a3324" stroke-width="3"/>
+  <g font-family="monospace" font-size="34" fill="#e0a83c" text-anchor="middle" xml:space="preserve">
+    <text x="96" y="66">/**\</text>
+    <text x="96" y="102">[###]</text>
+    <text x="96" y="138">|_||_|</text>
+  </g>
+  <text x="96" y="172" font-family="monospace" font-size="20" fill="#6ec26e" text-anchor="middle">NEXUS-7</text>
+</svg>

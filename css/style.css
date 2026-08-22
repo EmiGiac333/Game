@@ -1,0 +1,204 @@
+/* ============================================================
+   NEXUS-7 :: style.css -- terminale CRT post-apocalittico
+   ============================================================ */
+:root{
+  --bg:#0b0d0a; --bg2:#11150f; --bg3:#161b13;
+  --linea:#2a3324;
+  --txt:#a8b89c; --dim:#5e6d55; --forte:#d6e6c8;
+  --ambra:#e0a83c; --verde:#6ec26e; --rosso:#e05c4d; --blu:#6fb0d8;
+  --scrap:#b58a5a; --water:#4fa8c0; --food:#6ec26e; --alloy:#c9b26a;
+  --data:#7db8ff; --energy:#f0c94a; --toxic:#8fd14f; --core:#e0e6d0;
+  --house:#c58ac0; --gold:#e0a83c; --rock:#6b6f63; --dust:#7a6a52;
+  --sicuro-b: env(safe-area-inset-bottom, 0px);
+  --tabs-h: 46px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--bg)}
+body{
+  font-family:"DejaVu Sans Mono","Liberation Mono","Roboto Mono",Menlo,Consolas,monospace;
+  color:var(--txt);font-size:13px;line-height:1.35;
+  -webkit-user-select:none;user-select:none;
+  overscroll-behavior:none;
+}
+#app{display:flex;flex-direction:column;height:100dvh;height:100vh}
+
+/* ---------------- HUD ---------------- */
+#hud{background:var(--bg2);border-bottom:1px solid var(--linea);padding:4px 6px;padding-top:calc(4px + env(safe-area-inset-top,0px));flex:0 0 auto}
+#hud-top{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);margin-bottom:3px}
+#hud-top .tit{color:var(--ambra);font-weight:bold;letter-spacing:1px}
+#hud-top .liv{color:var(--core);font-weight:bold}
+#hud-top .nomeliv{color:var(--forte);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hud-top .cantiere{margin-left:auto;color:var(--ambra);white-space:nowrap}
+#hud-top .ciclo{margin-left:auto}
+#hud-res{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+#hud-res::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;background:var(--bg3);border:1px solid var(--linea);border-radius:2px;
+  padding:2px 5px;font-size:11px;white-space:nowrap}
+.chip b{color:inherit;font-weight:bold}
+.chip u{color:var(--dim);text-decoration:none;font-size:10px}
+.chip em{font-style:normal;font-size:10px}
+.chip em.su{color:var(--verde)} .chip em.giu{color:var(--rosso)}
+.chip.pieno{border-color:var(--ambra)}
+.c-scrap{color:var(--scrap)} .c-water{color:var(--water)} .c-food{color:var(--food)}
+.c-alloy{color:var(--alloy)} .c-data{color:var(--data)} .c-energy{color:var(--energy)}
+.c-toxic{color:var(--toxic)} .c-core{color:var(--core)} .c-house{color:var(--house)}
+.c-gold{color:var(--gold)} .c-struct{color:var(--txt)} .c-danger{color:var(--rosso)}
+.c-road{color:var(--dim)}
+#hud-stat{display:flex;gap:8px;overflow-x:auto;font-size:10px;color:var(--dim);scrollbar-width:none}
+#hud-stat::-webkit-scrollbar{display:none}
+#hud-stat .st{white-space:nowrap}
+#hud-stat b{color:var(--txt)}
+#hud-stat .allarme,#hud-stat .allarme b{color:var(--rosso)}
+
+/* ---------------- MAPPA ---------------- */
+#mapwrap{flex:1 1 auto;overflow:auto;position:relative;background:var(--bg);
+  -webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
+#mapwrap.tattica{display:flex;align-items:center;justify-content:center;overflow:hidden}
+#mapwrap.tattica #map{max-width:100%;max-height:100%;object-fit:contain}
+#map{display:block;margin:0;image-rendering:pixelated;image-rendering:crisp-edges;
+  touch-action:pan-x pan-y;cursor:crosshair}
+
+#mapctl{position:absolute;right:6px;bottom:6px;display:flex;gap:3px;
+  background:rgba(11,13,10,.85);border:1px solid var(--linea);border-radius:2px;padding:2px}
+#mapctl .btn{padding:4px 7px;font-size:12px}
+#zoomlab{color:var(--dim);min-width:38px;text-align:center}
+
+/* ---------------- TUTORIAL ---------------- */
+#tut{flex:0 0 auto;display:none;background:#151b12;border-top:1px solid #3f5230;padding:5px 7px}
+#tut.aperto{display:block}
+.tut-h{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--ambra)}
+.tut-h b{color:var(--verde);font-weight:normal}
+.tut-t{color:var(--forte);flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tut-o{font-size:12px;color:#b9e8a8;margin:3px 0 2px}
+.tut-b{display:flex;align-items:center;gap:6px}
+.tut-s{font-size:9px;color:var(--dim);line-height:1.3;flex:1 1 auto}
+
+/* ---------------- CONTESTO ---------------- */
+#ctx{flex:0 0 auto;background:var(--bg2);border-top:1px solid var(--linea);
+  padding:4px 6px;min-height:52px;font-size:11px}
+.ctx-r{margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx-r.ok{color:var(--verde)} .ctx-r.no{color:var(--rosso)}
+.ctx-b{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap}
+.dim{color:var(--dim)}
+
+/* ---------------- BOTTONI ---------------- */
+.btn{display:inline-block;background:var(--bg3);border:1px solid var(--linea);border-radius:2px;
+  padding:5px 9px;font-size:11px;color:var(--txt);cursor:pointer;white-space:nowrap;
+  text-align:center;transition:background .1s}
+.btn:active{background:#2a3324}
+.btn.ok{border-color:#3f6b34;color:#a8dc95}
+.btn.no{border-color:#6b3a34;color:#e0a49a}
+.btn.dis{opacity:.4}
+.btn.attivo{background:#2a3324;border-color:var(--ambra);color:var(--ambra)}
+.btn.mini{padding:3px 6px;font-size:10px}
+.btn u{display:block;text-decoration:none;font-size:9px;color:var(--dim);margin-top:1px}
+
+/* ---------------- TAB ---------------- */
+#tabs{flex:0 0 auto;position:relative;z-index:50;display:flex;gap:2px;background:var(--bg2);border-top:1px solid var(--linea);
+  padding:4px 4px calc(4px + var(--sicuro-b));overflow-x:auto;scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+#tabs .btn{flex:1 1 auto;min-width:50px;font-size:9px;padding:8px 2px;letter-spacing:0}
+#tabs .btn.nuovo::after{content:' *';color:var(--ambra);font-weight:bold}
+
+/* ---------------- PANNELLO ---------------- */
+#panel{position:fixed;left:0;right:0;max-height:70dvh;max-height:70vh;
+  background:var(--bg2);border-top:2px solid var(--linea);
+  transform:translateY(101%);transition:transform .16s ease-out;
+  display:flex;flex-direction:column;z-index:40;
+  bottom:calc(var(--tabs-h) + var(--sicuro-b))}
+#panel.aperto{transform:translateY(0)}
+.ph{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--linea);
+  background:var(--bg3);flex:0 0 auto}
+.ph-t{color:var(--ambra);font-size:12px;letter-spacing:1px;white-space:nowrap}
+.ph-x{color:var(--dim);font-size:9px;margin-left:auto;text-align:right;line-height:1.2}
+.scroll{overflow-y:auto;padding:6px 8px 14px;-webkit-overflow-scrolling:touch}
+.cat{color:var(--ambra);font-size:10px;margin:10px 0 4px;letter-spacing:1px}
+.pad{padding:3px 0}
+
+/* voci elenco (costruzioni, ricerca) */
+.voce{border:1px solid var(--linea);border-radius:2px;padding:5px 6px;margin-bottom:4px;background:var(--bg3)}
+.voce[data-az]{cursor:pointer}
+.voce[data-az]:active{background:#222a1c}
+.voce.bloccata{opacity:.42}
+.voce.nopay{opacity:.62;border-style:dashed}
+.voce.fatta{border-color:#3f6b34}
+.v-a{display:flex;align-items:center;gap:6px;font-size:12px}
+.v-a b{color:var(--forte);font-weight:normal}
+.v-g{display:inline-block;width:26px;height:26px;flex:0 0 26px;object-fit:contain;
+  image-rendering:pixelated;image-rendering:crisp-edges;vertical-align:middle}
+.conta{margin-left:auto;font-size:10px;color:var(--dim);border:1px solid var(--linea);
+  border-radius:2px;padding:0 4px;flex:0 0 auto}
+.conta.no{color:var(--ambra);border-color:var(--ambra)}
+.v-b{font-size:10px;color:var(--scrap);margin-top:2px}
+.v-c{font-size:10px;margin-top:2px}
+.no{color:var(--rosso)} .ok{color:var(--verde)}
+.tag{display:inline-block;border:1px solid var(--linea);border-radius:2px;padding:0 4px;
+  margin:2px 3px 0 0;font-size:9px;color:var(--verde)}
+.tag.req{color:var(--dim)}
+
+/* scansione edificio */
+.artebig{margin:6px 0;padding:10px;background:var(--bg);border:1px solid var(--linea);text-align:center}
+.artebig img{image-rendering:pixelated;image-rendering:crisp-edges;max-width:100%;height:auto;
+  display:inline-block;vertical-align:middle}
+.s-nome{font-size:14px;letter-spacing:1px;text-align:center}
+.s-sub{font-size:10px;text-align:center;margin-bottom:4px}
+.lore{font-size:11px;color:var(--txt);opacity:.85;margin:6px 0;line-height:1.45}
+/* testo narrativo: <pre> per conservare l'impaginazione dei log */
+.racconto{margin:2px 0 10px;padding:9px 10px;background:var(--bg);border:1px solid var(--linea);
+  border-left:3px solid var(--ambra);font:inherit;font-size:11px;line-height:1.55;
+  white-space:pre-wrap;word-break:break-word;color:#bccdb0}
+.tab{border:1px solid var(--linea);border-radius:2px;background:var(--bg3);padding:3px 6px}
+.tab .r{display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:2px 0;
+  border-bottom:1px dotted #232b1d}
+.tab .r:last-child{border-bottom:none}
+.tab .r.lunga{flex-direction:column;align-items:flex-start;gap:1px}
+.tab .r.lunga>span:last-child{text-align:left;white-space:normal;word-break:break-word;line-height:1.4}
+.tab .r>span:first-child{color:var(--dim)}
+.tab .r>span:last-child{color:var(--txt);text-align:right;white-space:nowrap}
+.azioni{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 4px}
+.azioni .btn{flex:1 1 44%;padding:9px 6px}
+.aiuto p{font-size:11px;margin:6px 0;line-height:1.55}
+.aiuto i{font-style:italic;color:var(--forte)}
+.aiuto b{color:var(--ambra);font-weight:normal}
+
+/* diario */
+.log .lg{font-size:10px;padding:3px 0;border-bottom:1px dotted #232b1d;line-height:1.4}
+.log .lc{color:var(--dim);margin-right:6px}
+.log .good{color:var(--verde)} .log .bad{color:var(--rosso)}
+.log .warn{color:var(--ambra)} .log .sys{color:var(--txt)}
+
+/* ---------------- NOTIFICHE ---------------- */
+#toasts{position:fixed;left:0;right:0;top:0;z-index:60;padding:6px;
+  padding-top:calc(6px + env(safe-area-inset-top,0px));
+  display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
+#toasts>*{pointer-events:auto}
+.toast{max-width:94%;background:var(--bg3);border:1px solid var(--linea);border-radius:2px;
+  padding:5px 9px;font-size:11px;opacity:1;transition:opacity .5s}
+.toast.via{opacity:0}
+.toast.good{border-color:#3f6b34;color:#a8dc95}
+.toast.bad{border-color:#6b3a34;color:#e0a49a}
+.toast.warn{border-color:#6b5c34;color:var(--ambra)}
+.overlay{background:var(--bg2);border:2px solid var(--linea);border-radius:2px;padding:10px;
+  max-width:96%;overflow-x:auto}
+.overlay pre{margin:0;font:inherit;font-size:10px;line-height:1.25;white-space:pre}
+.overlay.good{border-color:#3f6b34;color:#a8dc95}
+.overlay.bad{border-color:#6b3a34;color:#e0a49a}
+
+/* ---------------- AVVIO ---------------- */
+#boot{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center}
+#boot pre{margin:0;font:inherit;font-size:10px;line-height:1.15;color:var(--ambra);white-space:pre}
+#boot-prog{font-size:10px;color:var(--dim);letter-spacing:1px;min-height:14px}
+#boot-prog.errore{color:var(--rosso)}
+.boot-b{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.boot-b .btn{padding:11px 16px;font-size:12px}
+.boot-n{font-size:11px;color:var(--dim);line-height:1.6;margin:4px 0 0}
+.boot-d{color:#4a5544;font-size:10px}
+
+/* schermi larghi: la mappa resta centrata */
+@media (min-width:900px){
+  body{font-size:14px}
+  #mapwrap{display:flex;justify-content:center;align-items:flex-start}
+  #panel{left:50%;transform:translate(-50%,101%);width:560px;max-width:100%;border-left:1px solid var(--linea);border-right:1px solid var(--linea)}
+  #panel.aperto{transform:translate(-50%,0)}
+}
