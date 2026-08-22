@@ -28,10 +28,12 @@ non richiede installazione né connessione dopo la prima apertura.
 
 **Opzione 1 — GitHub Pages (consigliata).**
 
-1. Su GitHub: *Settings → Pages → Source: Deploy from a branch*, scegli il branch
-   `claude/ascii-city-builder-game-iyi897` e cartella `/ (root)`, poi *Save*.
-2. Apri l'indirizzo pubblicato (`https://<utente>.github.io/<repo>/`) con Chrome su Android.
-3. Menu di Chrome → **Aggiungi a schermata Home**: il gioco si apre a schermo intero
+1. Su GitHub, una volta sola: *Settings → Pages → Build and deployment →
+   Source: **GitHub Actions***.
+2. Da quel momento ogni push pubblica da solo: ci pensa il workflow
+   [`pagine.yml`](.github/workflows/pagine.yml).
+3. Apri l'indirizzo pubblicato (`https://<utente>.github.io/<repo>/`) con Chrome su Android.
+4. Menu di Chrome → **Aggiungi a schermata Home**: il gioco si apre a schermo intero
    come un'app e funziona anche **offline** (service worker).
 
 **Opzione 2 — server locale.**
@@ -187,6 +189,39 @@ risoluzione (fino a 1536×1024), descrizione, e tutte le caratteristiche in chia
 
 ---
 
+## Test e automazione
+
+Il gioco non ha passi di compilazione, ma ha una rete di sicurezza: gran parte
+degli squilibri di un city builder non danno errori, si manifestano come partite
+che collassano migliaia di cicli dopo la causa.
+
+```bash
+npm install        # solo per i test: il gioco resta file statici
+npm test           # tutto
+```
+
+| Comando | Cosa verifica |
+|---|---|
+| `npm run verifica` | ~550 invarianti: limiti coerenti con gli sblocchi, dimensioni esatte dei PNG, **sostenibilità di ogni grado** (energia, manodopera, contaminazione), costi del Nucleo entro i tetti di magazzino, albero di ricerca, storia, ordine dei passi del tutorial |
+| `npm run verifica-sprite` | rigenera l'arte da `tools/` e la confronta **pixel per pixel** con quella committata |
+| `npm run simula` | gioca 5 partite intere headless e pretende che ognuna arrivi alla vittoria |
+| `npm run browser` | 44 prove end-to-end in Chromium a viewport da telefono: caricamento sprite, disegno della plancia, tocco, zoom, percorso completo del tutorial, sblocchi narrativi, pannelli, salvataggi e migrazione dai formati precedenti |
+
+Due workflow GitHub Actions:
+
+- [`verifica.yml`](.github/workflows/verifica.yml) — gira su ogni push e pull request,
+  in due job: prima i controlli statici (veloci, falliscono subito), poi le prove nel browser.
+- [`pagine.yml`](.github/workflows/pagine.yml) — pubblica su GitHub Pages a ogni push su
+  `main` o sul branch di sviluppo, dopo aver ripassato i controlli statici. Mette online
+  solo ciò che serve a giocare: niente test, strumenti o dipendenze.
+
+La verifica di sostenibilità e la simulazione non sono formalità: entrambi gli
+squilibri più seri di questo progetto — la contaminazione impossibile da contrastare
+ai gradi bassi e i limiti che permettevano più consumatori di quanta energia fosse
+producibile — sarebbero stati intercettati da questi controlli.
+
+---
+
 ## Struttura del progetto
 
 ```
@@ -202,6 +237,8 @@ js/ui.js                HUD, pannelli, input touch, ciclo di gioco
 js/main.js              avvio e registrazione service worker
 sprites/                61 sprite PNG + elenco.json per la cache offline
 tools/                  generatore della pixel art (pixel.py, edifici_*.py, terreni.py)
+test/                   invarianti, confronto sprite, simulazione, prove in browser
+.github/workflows/      verifica su ogni push, pubblicazione su GitHub Pages
 sw.js                   cache offline (codice + sprite)
 manifest.webmanifest    installazione come app Android
 ```

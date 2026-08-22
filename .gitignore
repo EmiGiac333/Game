@@ -1,2 +1,10 @@
 # artefatti dei test
 shot-*.png
+sp-*.png
+fin-*.png
+
+# dipendenze di sviluppo (servono solo ai test, non al gioco)
+node_modules/
+
+# cartella costruita dal workflow di pubblicazione
+_sito/

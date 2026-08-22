@@ -1,0 +1,69 @@
+name: Verifica
+
+# Il gioco e' fatto di file statici: non c'e' niente da compilare.
+# Questi controlli servono a impedire che dati, sprite e bilanciamento
+# divergano dal codice che li produce.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dati:
+    name: Dati, sprite e bilanciamento
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Invarianti di dati e sprite
+        # coerenza limiti/sblocchi, dimensioni dei PNG, sostenibilita' di
+        # ogni grado del Nucleo, albero di ricerca, storia, tutorial
+        run: node test/verifica_dati.js
+
+      - name: Gli sprite corrispondono al generatore
+        # rigenera l'arte da tools/ e confronta i pixel con quella committata
+        run: node test/verifica_sprite.js
+
+      - name: Partite complete su piu' semi
+        # una partita che non arriva alla vittoria segnala uno squilibrio:
+        # i collassi si manifestano migliaia di cicli dopo la causa
+        run: node test/simula.js
+
+  browser:
+    name: Prove nel browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache dei browser di Playwright
+        id: cache-browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Scarica Chromium
+        if: steps.cache-browser.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Dipendenze di sistema di Chromium
+        if: steps.cache-browser.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Prove end-to-end a viewport da telefono
+        # caricamento sprite, disegno della plancia, tocco, zoom,
+        # percorso del tutorial, sblocchi narrativi, pannelli, salvataggi
+        run: node test/browser.js

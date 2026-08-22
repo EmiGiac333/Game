@@ -1,0 +1,64 @@
+name: Pubblica su GitHub Pages
+
+# Pubblica il gioco come sito statico, cosi' e' raggiungibile da Android
+# senza passaggi manuali.
+#
+# Da fare una volta sola nel repository:
+#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
+# Senza quell'impostazione il passo di pubblicazione fallisce.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/ascii-city-builder-game-iyi897
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una pubblicazione alla volta, senza annullare quella in corso.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pubblica:
+    name: Costruisci e pubblica
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Controlli rapidi prima di pubblicare
+        # non serve il browser: bastano a evitare di mettere online
+        # dati incoerenti o sprite non allineati al generatore
+        run: |
+          node test/verifica_dati.js
+          node test/verifica_sprite.js
+
+      - name: Prepara il sito
+        # solo cio' che serve a giocare: fuori test, strumenti e dipendenze
+        run: |
+          mkdir -p _sito
+          cp index.html icon.svg manifest.webmanifest sw.js _sito/
+          cp -r css js sprites _sito/
+          echo "Pubblicato da ${GITHUB_SHA::7} il $(date -u +%Y-%m-%dT%H:%MZ)" > _sito/versione.txt
+          du -sh _sito
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _sito
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

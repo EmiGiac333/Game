@@ -1,0 +1,18 @@
+{
+  "name": "nexus7",
+  "version": "1.0.0",
+  "description": "NEXUS-7 :: city builder post-apocalittico con sprite pixelati. Il gioco e' fatto di file statici: queste dipendenze servono solo ai test.",
+  "private": true,
+  "scripts": {
+    "test": "npm run verifica && npm run verifica-sprite && npm run simula && npm run browser",
+    "verifica": "node test/verifica_dati.js",
+    "verifica-sprite": "node test/verifica_sprite.js",
+    "simula": "node test/simula.js",
+    "browser": "node test/browser.js",
+    "sprite": "python3 tools/genera_sprite.py",
+    "servi": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "playwright": "1.49.0"
+  }
+}
