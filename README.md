@@ -57,7 +57,7 @@ spiega una meccanica e propone un obiettivo, che si completa da solo quando lo
 esegui davvero in gioco. Si può nascondere in qualsiasi momento e **riprendere o
 rifare dal MENU**.
 
-Il **MANUALE COMPLETO** (12 sezioni: risorse, energia, addetti, adiacenze,
+Il **MANUALE COMPLETO** (13 sezioni: il Nucleo, risorse, energia, addetti, adiacenze,
 potenziamenti, difesa, contaminazione, ricerca, strategia d'apertura…) è sempre
 raggiungibile dal MENU, anche a partita avanzata.
 
@@ -121,8 +121,8 @@ tossica, le serre guadagnano vicino alle fonti d'acqua.
 **Macerie.** Non sono edificabili: vanno sgomberate prima, e in cambio danno rottami
 (a volte leghe o dati).
 
-**Potenziamenti.** Ogni struttura sale fino a **MK-5**: ×2,6 su resa, alloggi e difesa.
-Nel tardo gioco, quando lo spazio finisce, conviene crescere in verticale.
+**Potenziamenti.** Ogni struttura sale fino a **MK-5**: ×2,6 su resa, alloggi e difesa,
+ma mai oltre il grado del Nucleo. Quando spazio e limiti finiscono, si cresce in verticale.
 
 **Difesa e incursioni.** I predoni attaccano periodicamente e diventano più forti a ogni
 livello. Se la difesa è sotto la loro forza perdi risorse, strutture e coloni.
@@ -132,28 +132,43 @@ incursioni, ma anche profughi, relitti orbitali, archivi intatti, carovane e fal
 
 ---
 
-## Progressione
+## Progressione — il Nucleo comanda tutto
 
-Dieci livelli di città, ognuno estende il perimetro edificabile e sblocca nuove strutture:
+Come nei builder alla *Clash of Clans*, **il livello del settore è il grado del NUCLEO DI COMANDO**.
+Non sale da solo: lo potenzi tu, paghi risorse e aspetti che finiscano i lavori.
 
-| Liv | Nome | Coloni | Strutture |
+Ogni grado del Nucleo:
+
+- estende il **perimetro edificabile**;
+- alza del **60%** il tetto di ogni magazzino;
+- **sblocca nuove strutture**;
+- aumenta **quante** strutture di ogni tipo puoi possedere (`3/5` accanto a ogni voce del menu di costruzione);
+- alza il **tetto dei potenziamenti**: nessuna struttura può superare il grado del Nucleo — con il Nucleo a MK-3, tutto il resto si ferma a MK-3.
+
+**Mentre il cantiere è aperto il Nucleo rende metà e le sue difese sono smontate**: aprirlo con
+i predoni in arrivo è un modo rapido per perdere una città.
+
+| Grado | Nome | Costo | Lavori |
 |---|---|---|---|
-| 1 | AVAMPOSTO | — | — |
-| 2 | INSEDIAMENTO | 14 | 6 |
-| 3 | BORGO DI FERRO | 32 | 13 |
-| 4 | DISTRETTO | 62 | 21 |
-| 5 | CITTADELLA | 110 | 29 |
-| 6 | NEXO URBANO | 180 | 37 |
-| 7 | METROPOLI DI CENERE | 280 | 46 |
-| 8 | CONURBAZIONE | 380 | 55 |
-| 9 | ARCOPOLI | 520 | 64 |
-| 10 | NEXUS PRIME | 700 | 74 |
+| MK-1 | AVAMPOSTO | — | — |
+| MK-2 | INSEDIAMENTO | 250 RTM | 20 cicli |
+| MK-3 | BORGO DI FERRO | 800 RTM | 35 cicli |
+| MK-4 | DISTRETTO | 1.300 RTM · 200 LEG | 55 cicli |
+| MK-5 | CITTADELLA | 2.100 RTM · 500 LEG | 80 cicli |
+| MK-6 | NEXO URBANO | 3.400 RTM · 900 LEG · 100 DAT | 110 cicli |
+| MK-7 | METROPOLI DI CENERE | 5.400 RTM · 1.500 LEG · 250 DAT | 150 cicli |
+| MK-8 | CONURBAZIONE | 8.600 RTM · 2.500 LEG · 450 DAT | 200 cicli |
+| MK-9 | ARCOPOLI | 13.800 RTM · 4.000 LEG · 700 DAT | 260 cicli |
+| MK-10 | NEXUS PRIME | 22.000 RTM · 6.500 LEG · 1.100 DAT | 340 cicli |
+
+Il pannello **CITTÀ** mostra sempre costo, durata e cosa sblocca il grado successivo.
 
 **25 strutture** su 8 categorie e **10 progetti di ricerca** in albero tecnologico
 (dal Fotovoltaico Spettrale al Protocollo Esodo).
 
-**Vittoria:** ricerca PROTOCOLLO ESODO, costruisci lo SPAZIOPORTO ESODO,
-apri la sua SCANSIONE e avvia il lancio. Sessanta cicli di conto alla rovescia — e difendilo.
+**Vittoria:** porta il Nucleo a **MK-10**, ricerca PROTOCOLLO ESODO, costruisci lo
+SPAZIOPORTO ESODO, apri la sua SCANSIONE e avvia il lancio. Sessanta cicli di conto
+alla rovescia — e difendilo.
 
 **Sconfitta:** restare senza coloni. Anche questo ha il suo epilogo.
 

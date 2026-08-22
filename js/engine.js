@@ -9,7 +9,7 @@
   var D = global.DATA;
   var MAP_W = 28, MAP_H = 18;
   var SAVE_KEY = 'nexus7.save.v1';
-  var SAVE_VER = 2;
+  var SAVE_VER = 3;
   var CICLO_MS = 1000;
 
   /* ---- RNG deterministico (mulberry32) ---- */
@@ -109,6 +109,7 @@
         edifici: [],
         tech: {},
         log: [],
+        nucleoUp: null,
         prossimoEvento: 70,
         eventiAttivi: [],
         statistiche: { costruiti: 0, demoliti: 0, raidRespinti: 0, mortiTotali: 0, natiTotali: 0 },
@@ -187,6 +188,10 @@
       if (!def) return { ok: false, motivo: 'STRUTTURA SCONOSCIUTA' };
       if (!this.sbloccato(def)) return { ok: false, motivo: 'NON ANCORA SBLOCCATO' };
       if (def.unique && this.contaTipo(tipo) > 0) return { ok: false, motivo: 'STRUTTURA UNICA GIA PRESENTE' };
+      var lim = this.limiteDi(def), quante = this.contaTipo(tipo);
+      if (quante >= lim) {
+        return { ok: false, motivo: 'LIMITE RAGGIUNTO ' + quante + '/' + lim + ' -- POTENZIA IL NUCLEO' };
+      }
       if (!this.inMappa(x, y) || !this.inMappa(x + def.w - 1, y + def.h - 1)) return { ok: false, motivo: 'FUORI MAPPA' };
       if (!this.nelSettore(x, y, def.w, def.h)) return { ok: false, motivo: 'SETTORE NON AUTORIZZATO -- SALI DI LIVELLO' };
 
@@ -262,7 +267,10 @@
 
     potenzia: function (b) {
       var def = D.byId(b.tipo);
-      if (b.lvl >= def.maxLvl) return { ok: false, motivo: 'LIVELLO MASSIMO RAGGIUNTO' };
+      if (def.id === 'nucleo') return this.avviaPotenziamentoNucleo();
+      var tetto = this.maxLvlDi(def);
+      if (b.lvl >= def.maxLvl) return { ok: false, motivo: 'GRADO MASSIMO DELLA STRUTTURA' };
+      if (b.lvl >= tetto) return { ok: false, motivo: 'IL NUCLEO E SOLO MK-' + this.state.livello + ': POTENZIALO PRIMA' };
       var costo = this.costoDi(def, b.lvl + 1);
       if (!this.puoPagare(costo)) return { ok: false, motivo: 'RISORSE INSUFFICIENTI' };
       this.paga(costo);
@@ -311,9 +319,21 @@
     },
 
     sbloccato: function (def) {
-      if (def.unlock > this.state.livello) return false;
+      if (this.limiteDi(def) <= 0) return false;
       if (def.tech && !this.state.tech[def.tech]) return false;
       return true;
+    },
+
+    /* Quante strutture di questo tipo consente il grado attuale del Nucleo. */
+    limiteDi: function (def) {
+      if (!def.limiti) return 9999;
+      return def.limiti[Math.max(0, Math.min(def.limiti.length - 1, this.state.livello - 1))];
+    },
+
+    /* Grado MK massimo: nessuna struttura puo' superare il grado del Nucleo. */
+    maxLvlDi: function (def) {
+      if (def.id === 'nucleo') return def.maxLvl;
+      return Math.min(def.maxLvl, this.state.livello);
     },
 
     /* =========================================================
@@ -409,10 +429,10 @@
     multHp: function (hp) { return hp >= 60 ? 1 : 0.35 + 0.65 * (hp / 60); },
 
     cap: function (k) {
-      /* La capienza base cresce col livello citta': senza questo i progetti
-         di fine partita (ESODO 700 DAT, SPAZIOPORTO 900 LEG) sarebbero
-         irraggiungibili e la partita si bloccherebbe in modo invisibile. */
-      var c = (D.BASE_CAP[k] || 0) * (1 + 0.45 * (this.state.livello - 1));
+      /* La capienza base cresce in modo geometrico con il grado del NUCLEO:
+         i potenziamenti di fine partita costano decine di migliaia di unita'
+         e senza questa curva non sarebbero mai accumulabili. */
+      var c = (D.BASE_CAP[k] || 0) * Math.pow(1.6, this.state.livello - 1);
       for (var i = 0; i < this.state.edifici.length; i++) {
         var b = this.state.edifici[i], def = D.byId(b.tipo);
         if (def.storage && def.storage[k]) c += def.storage[k] * this.multLivello(b.lvl);
@@ -439,7 +459,10 @@
         lavori += Math.round(def.jobs * (1 + 0.3 * (eds[i].lvl - 1)));
       }
       var forzaLavoro = Math.floor(st.pop * 0.65);
-      var ratioLavoro = lavori > 0 ? Math.min(1, forzaLavoro / lavori) : 1;
+      /* I droni coprono un minimo del 30% anche senza personale: senza questo
+         pavimento una carestia azzera la produzione di acqua e cibo e la
+         colonia non ha piu' alcun modo di risollevarsi. */
+      var ratioLavoro = lavori > 0 ? Math.max(0.30, Math.min(1, forzaLavoro / lavori)) : 1;
 
       /* --- 2. fattore morale e malus attivi --- */
       var fMorale = 0.70 + 0.30 * (st.morale / 100);
@@ -452,10 +475,14 @@
 
       /* --- 3. energia: prima i produttori (non dipendono dalla rete) --- */
       var nrgProd = 0, nrgCons = 0;
+      var cantiere = !!st.nucleoUp;
       for (i = 0; i < eds.length; i++) {
         b = eds[i]; def = D.byId(b.tipo);
         var base = this.multLivello(b.lvl) * this.multHp(b.hp) * this.multTech(b.tipo) *
                    this.bonusAdiacenza(b).mult * fMorale * malusProd;
+        /* Nucleo in ricostruzione: rende meta' e le sue difese sono smontate. */
+        b.inCantiere = (def.id === 'nucleo' && cantiere);
+        if (b.inCantiere) base *= 0.5;
         b._base = base;
         b._staff = def.jobs > 0 ? ratioLavoro : 1;
         if (def.produce && def.produce.nrg) nrgProd += def.produce.nrg * base * b._staff * malusEnergia;
@@ -492,7 +519,9 @@
         for (k in (def.consume || {})) { if (k !== 'nrg') cons[k] += def.consume[k] * this.multLivello(b.lvl) * (eff > 0 ? 1 : 0); }
 
         alloggi += def.housing * this.multLivello(b.lvl);
-        difesa += def.difesa * this.multLivello(b.lvl) * (def.consume && def.consume.nrg ? ratioEnergia : 1) * this.multHp(b.hp);
+        if (!b.inCantiere) {
+          difesa += def.difesa * this.multLivello(b.lvl) * (def.consume && def.consume.nrg ? ratioEnergia : 1) * this.multHp(b.hp);
+        }
         emissione += (def.contamina || 0) * eff;
         assorbimento += (def.assorbe || 0) * eff;
         moraleEdifici += (def.morale || 0) * (def.id === 'medico' && st.tech.medicina ? 1.5 : 1) * (b.attivo ? 1 : 0.2);
@@ -598,8 +627,8 @@
         }
       }
 
-      /* --- 13. avanzamento di livello --- */
-      this.controllaLivello();
+      /* --- 13. cantiere del Nucleo --- */
+      this.avanzaCantiere(dt);
     },
 
     /* =========================================================
@@ -609,18 +638,52 @@
       return this.state.livello < D.LEVELS.length ? D.LEVELS[this.state.livello] : null;
     },
 
-    controllaLivello: function () {
+    nucleo: function () {
+      var e = this.state.edifici;
+      for (var i = 0; i < e.length; i++) if (e[i].tipo === 'nucleo') return e[i];
+      return null;
+    },
+
+    /* Il potenziamento del Nucleo e' l'unico modo di far salire il settore. */
+    puoPotenziareNucleo: function () {
       var next = this.prossimoLivello();
-      if (!next) return;
-      var edifici = this.state.edifici.length;
-      if (this.state.pop >= next.pop && edifici >= next.edifici) {
-        this.state.livello = next.lvl;
-        this.state.morale = Math.min(100, this.state.morale + 8);
-        this.logga('=== SETTORE-7 PROMOSSO A ' + next.nome + ' (LIV.' + next.lvl + ') ===', 'good');
-        this.logga('Perimetro operativo esteso. Nuove strutture autorizzate.', 'good');
-        this.emit('livello', next);
-        this.emit('mappa');
-      }
+      if (!next) return { ok: false, motivo: 'IL NUCLEO E AL GRADO MASSIMO (MK-10)' };
+      if (this.state.nucleoUp) return { ok: false, motivo: 'CANTIERE GIA APERTO' };
+      if (!this.puoPagare(next.costo)) return { ok: false, motivo: 'SERVONO ' + this.testoCosto(next.costo) };
+      return { ok: true, next: next };
+    },
+
+    avviaPotenziamentoNucleo: function () {
+      var chk = this.puoPotenziareNucleo();
+      if (!chk.ok) return chk;
+      var next = chk.next;
+      this.paga(next.costo);
+      this.state.nucleoUp = { a: next.lvl, resta: next.tempo, totale: next.tempo };
+      this.logga('CANTIERE APERTO: NUCLEO MK-' + next.lvl + ' (' + next.tempo + ' cicli). Il settore e vulnerabile.', 'warn');
+      this.aggiorna(0);
+      this.emit('mappa');
+      return { ok: true };
+    },
+
+    /* Fa scorrere il cantiere del Nucleo di un ciclo. */
+    avanzaCantiere: function (dt) {
+      var st = this.state;
+      if (!st.nucleoUp) return;
+      st.nucleoUp.resta -= dt;
+      if (st.nucleoUp.resta > 0) return;
+
+      var lvl = st.nucleoUp.a;
+      st.nucleoUp = null;
+      st.livello = lvl;
+      var n = this.nucleo();
+      if (n) { n.lvl = lvl; n.hp = 100; }
+      st.morale = Math.min(100, st.morale + 8);
+      var info = D.LEVELS[lvl - 1];
+      this.logga('=== NUCLEO MK-' + lvl + ' ATTIVO -- SETTORE-7 E ORA ' + info.nome + ' ===', 'good');
+      this.logga('Perimetro esteso, magazzini ampliati, nuove strutture autorizzate.', 'good');
+      this.aggiorna(0);
+      this.emit('livello', info);
+      this.emit('mappa');
     },
 
     /* =========================================================
@@ -783,6 +846,18 @@
         if (st.v < SAVE_VER) {
           if (global.Story) global.Story.init(st);
           if (global.Tutorial) { global.Tutorial.init(st); st.tutorial.attivo = false; st.tutorial.completato = true; }
+          /* v3: il livello del settore e' il grado del Nucleo. Allineo il
+             Nucleo al livello raggiunto e riporto le altre strutture sotto
+             il nuovo tetto MK, senza togliere niente al giocatore. */
+          if (st.v < 3) {
+            if (st.nucleoUp === undefined) st.nucleoUp = null;
+            for (var q = 0; q < st.edifici.length; q++) {
+              var eb = st.edifici[q], ed = D.byId(eb.tipo);
+              if (!ed) continue;
+              if (ed.id === 'nucleo') eb.lvl = Math.max(1, Math.min(ed.maxLvl, st.livello));
+              else eb.lvl = Math.max(1, Math.min(ed.maxLvl, Math.min(eb.lvl, st.livello)));
+            }
+          }
           st.v = SAVE_VER;
         }
         this.state = st;

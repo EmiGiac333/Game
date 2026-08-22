@@ -26,7 +26,9 @@ body{
 #hud{background:var(--bg2);border-bottom:1px solid var(--linea);padding:4px 6px;padding-top:calc(4px + env(safe-area-inset-top,0px));flex:0 0 auto}
 #hud-top{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);margin-bottom:3px}
 #hud-top .tit{color:var(--ambra);font-weight:bold;letter-spacing:1px}
-#hud-top .liv{color:var(--forte)}
+#hud-top .liv{color:var(--core);font-weight:bold}
+#hud-top .nomeliv{color:var(--forte);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hud-top .cantiere{margin-left:auto;color:var(--ambra);white-space:nowrap}
 #hud-top .ciclo{margin-left:auto}
 #hud-res{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
 #hud-res::-webkit-scrollbar{display:none}
@@ -139,6 +141,9 @@ body{
 .v-a{display:flex;align-items:center;gap:6px;font-size:12px}
 .v-a b{color:var(--forte);font-weight:normal}
 .v-g{display:inline-block;width:14px;text-align:center;font-weight:bold}
+.conta{margin-left:auto;font-size:10px;color:var(--dim);border:1px solid var(--linea);
+  border-radius:2px;padding:0 4px;flex:0 0 auto}
+.conta.no{color:var(--ambra);border-color:var(--ambra)}
 .v-b{font-size:10px;color:var(--scrap);margin-top:2px}
 .v-c{font-size:10px;margin-top:2px}
 .no{color:var(--rosso)} .ok{color:var(--verde)}
@@ -160,6 +165,8 @@ body{
 .tab .r{display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:2px 0;
   border-bottom:1px dotted #232b1d}
 .tab .r:last-child{border-bottom:none}
+.tab .r.lunga{flex-direction:column;align-items:flex-start;gap:1px}
+.tab .r.lunga>span:last-child{text-align:left;white-space:normal;word-break:break-word;line-height:1.4}
 .tab .r>span:first-child{color:var(--dim)}
 .tab .r>span:last-child{color:var(--txt);text-align:right;white-space:nowrap}
 .azioni{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 4px}

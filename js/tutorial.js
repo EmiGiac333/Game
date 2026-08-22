@@ -86,10 +86,17 @@
       fatto: function (E, ui) { return ui.visto.scansione === true; }
     },
     {
+      id: 'livello', titolo: 'IL NUCLEO COMANDA TUTTO',
+      testo: 'Il settore non cresce da solo: cresce quando potenzi il NUCLEO DI COMANDO.\n\nOgni grado del Nucleo estende il perimetro, alza i magazzini del 60%, sblocca nuove strutture e aumenta QUANTE ne puoi avere di ciascun tipo. Nessuna struttura puo\' superare il grado del Nucleo.\n\nI lavori costano risorse e richiedono tempo: mentre il cantiere e\' aperto il Nucleo rende meta\' e le sue difese sono smontate.',
+      azione: 'Porta il NUCLEO a MK-2',
+      suggerimento: 'Apri il pannello CITTA, oppure scansiona il Nucleo: servono 250 RTM e 20 cicli di lavori.',
+      fatto: function (E) { return E.state.livello >= 2; }
+    },
+    {
       id: 'potenzia', titolo: 'POTENZIAMENTI',
-      testo: 'Ogni struttura sale fino a MK-5: alla quinta rende 2,6 volte tanto, con lo stesso spazio occupato.\n\nNel tardo gioco, quando il terreno finisce, si cresce in verticale.',
+      testo: 'Ogni struttura sale fino a MK-5: alla quinta rende 2,6 volte tanto, con lo stesso spazio occupato.\n\nAttenzione al tetto: nessuna struttura puo\' superare il grado del NUCLEO. Con il Nucleo a MK-3, tutto il resto si ferma a MK-3.',
       azione: 'Potenzia una struttura a MK-2',
-      suggerimento: 'Il pulsante POTENZIA e\' in fondo al pannello SCANSIONE.',
+      suggerimento: 'Ora che il Nucleo e\' MK-2 il tetto si e\' alzato. Il pulsante POTENZIA e\' in fondo al pannello SCANSIONE.',
       fatto: function (E) {
         var e = E.state.edifici;
         for (var i = 0; i < e.length; i++) if (e[i].lvl >= 2 && e[i].tipo !== 'nucleo') return true;
@@ -103,13 +110,6 @@
       suggerimento: 'Alcuni progetti richiedono un livello citta\' minimo, oltre ai DAT.',
       alEntrare: function (ui) { ui.visto.ricerca = false; },
       fatto: function (E, ui) { return ui.visto.ricerca === true; }
-    },
-    {
-      id: 'livello', titolo: 'CRESCERE',
-      testo: 'La citta\' sale di livello raggiungendo una soglia di COLONI e di STRUTTURE. Ogni livello estende il perimetro edificabile, alza i limiti di stoccaggio e sblocca nuove costruzioni.\n\nIl pannello CITTA\' mostra sempre quanto manca.',
-      azione: 'Porta il Settore-7 al livello 2',
-      suggerimento: 'Servono 14 coloni e 6 strutture. Alloggi, acqua e cibo in ordine e la popolazione cresce da sola.',
-      fatto: function (E) { return E.state.livello >= 2; }
     },
     {
       id: 'difesa', titolo: 'I FIGLI DELLA RUGGINE',

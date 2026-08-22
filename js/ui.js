@@ -205,6 +205,12 @@
           this.aggiornaCtx(); this.aggiornaHud();
           break;
 
+        case 'potenzia-nucleo':
+          r = E.avviaPotenziamentoNucleo();
+          this.toast(r.ok ? 'Cantiere aperto sul Nucleo.' : r.motivo, r.ok ? 'good' : 'bad');
+          if (this.pannello) this.apri(this.pannello);
+          this.aggiornaHud();
+          break;
         case 'potenzia':
           r = E.potenzia(this.selezione);
           this.toast(r.ok ? 'Potenziamento completato.' : r.motivo, r.ok ? 'good' : 'bad');
@@ -332,10 +338,15 @@
       var vel = VELOCITA[this.velocita];
       var etichettaVel = vel === 0 ? '||' : 'x' + vel;
 
+      var cant = st.nucleoUp;
       $('#hud-top').innerHTML =
         '<span class="tit">NEXUS-7</span>' +
-        '<span class="liv">LIV.' + st.livello + ' ' + liv.nome + '</span>' +
-        '<span class="ciclo">CICLO ' + Math.floor(st.ciclo) + '</span>' +
+        '<span class="liv">NUCLEO MK-' + st.livello + '</span>' +
+        '<span class="nomeliv">' + liv.nome + '</span>' +
+        (cant
+          ? '<span class="cantiere">MK-' + cant.a + ' ' +
+            R.barra(1 - cant.resta / cant.totale, 5) + ' ' + Math.ceil(cant.resta) + 'c</span>'
+          : '<span class="ciclo">CICLO ' + Math.floor(st.ciclo) + '</span>') +
         '<span class="btn mini" data-az="velocita">' + etichettaVel + '</span>';
 
       $('#hud-res').innerHTML = chips;
@@ -493,11 +504,15 @@
           var sbl = E.sbloccato(def);
           var costo = E.costoDi(def, 1);
           var pago = E.puoPagare(costo);
+          var lim = E.limiteDi(def), quante = E.contaTipo(def.id);
+          var pieno = sbl && quante >= lim;
           var motivo = '';
           if (!sbl) {
             motivo = def.tech && !st.tech[def.tech]
               ? 'RICHIEDE PROGETTO: ' + D.techById(def.tech).nome
-              : 'RICHIEDE LIVELLO ' + def.unlock;
+              : 'RICHIEDE NUCLEO MK-' + def.unlock;
+          } else if (pieno) {
+            motivo = 'LIMITE RAGGIUNTO -- POTENZIA IL NUCLEO';
           }
           var righe = [];
           for (var k in def.produce) righe.push('+' + n1(def.produce[k]) + ' ' + k.toUpperCase());
@@ -508,11 +523,13 @@
           if (def.morale) righe.push('+' + def.morale + ' MOR');
           if (def.jobs) righe.push(def.jobs + ' ADDETTI');
 
-          h += '<div class="voce ' + (sbl ? (pago ? '' : 'nopay') : 'bloccata') + '" ' +
-               (sbl && pago ? 'data-az="scegli" data-arg="' + def.id + '"' : '') + '>' +
+          h += '<div class="voce ' + (sbl ? (pieno ? 'bloccata' : (pago ? '' : 'nopay')) : 'bloccata') + '" ' +
+               (sbl && pago && !pieno ? 'data-az="scegli" data-arg="' + def.id + '"' : '') + '>' +
                '<div class="v-a"><span class="v-g c-' + def.color + '">' + esc(def.glyph) + '</span>' +
-               '<b>' + def.nome + '</b> <span class="dim">' + def.w + 'x' + def.h + '</span></div>' +
-               '<div class="v-b">' + (sbl ? esc(E.testoCosto(costo)) : '<span class="no">' + motivo + '</span>') + '</div>' +
+               '<b>' + def.nome + '</b> <span class="dim">' + def.w + 'x' + def.h + '</span>' +
+               (sbl ? '<span class="conta ' + (pieno ? 'no' : '') + '">' + quante + '/' + lim + '</span>' : '') +
+               '</div>' +
+               '<div class="v-b">' + (sbl && !pieno ? esc(E.testoCosto(costo)) : '<span class="no">' + motivo + '</span>') + '</div>' +
                '<div class="v-c dim">' + righe.join('  ') + '</div>' +
                '</div>';
         });
@@ -542,6 +559,7 @@
       var pot = (def.consume && def.consume.nrg && !(def.produce && def.produce.nrg)) ? (st.ratioEnergia || 1) : 1;
 
       var h = this.testata('SCANSIONE STRUTTURA', 'MK-' + b.lvl + '/' + def.maxLvl);
+      var tettoMk = E.maxLvlDi(def);
       h += '<div class="scroll">';
       h += '<pre class="artebig c-' + def.color + '">' + esc(telaio.join('\n')) + '</pre>';
       h += '<div class="s-nome c-' + def.color + '">' + def.nome + '</div>';
@@ -587,11 +605,26 @@
 
       /* --- azioni --- */
       h += '<div class="azioni">';
-      if (b.lvl < def.maxLvl) {
+      if (def.id === 'nucleo') {
+        /* Il Nucleo e' il motore della progressione: ha un cantiere proprio. */
+        var next = E.prossimoLivello();
+        if (st.nucleoUp) {
+          h += '<span class="btn dis">CANTIERE MK-' + st.nucleoUp.a + ' IN CORSO<u>' +
+               R.barra(1 - st.nucleoUp.resta / st.nucleoUp.totale, 10) + ' ' + Math.ceil(st.nucleoUp.resta) + ' cicli</u></span>';
+        } else if (next) {
+          var pn = E.puoPotenziareNucleo();
+          h += '<span class="btn ' + (pn.ok ? 'ok' : 'dis') + '" data-az="potenzia">POTENZIA A MK-' + next.lvl +
+               '<u>' + esc(E.testoCosto(next.costo)) + ' -- ' + next.tempo + ' cicli</u></span>';
+        } else {
+          h += '<span class="btn dis">NUCLEO AL GRADO MASSIMO</span>';
+        }
+      } else if (b.lvl >= def.maxLvl) {
+        h += '<span class="btn dis">GRADO MASSIMO DELLA STRUTTURA</span>';
+      } else if (b.lvl >= tettoMk) {
+        h += '<span class="btn dis">SERVE NUCLEO MK-' + (b.lvl + 1) + '<u>il Nucleo e MK-' + st.livello + '</u></span>';
+      } else {
         var cp = E.costoDi(def, b.lvl + 1);
         h += '<span class="btn ' + (E.puoPagare(cp) ? 'ok' : 'dis') + '" data-az="potenzia">POTENZIA MK-' + (b.lvl + 1) + '<u>' + esc(E.testoCosto(cp)) + '</u></span>';
-      } else {
-        h += '<span class="btn dis">MK MASSIMO</span>';
       }
       if (b.hp < 100) h += '<span class="btn" data-az="ripara">RIPARA</span>';
       if (b.tipo === 'spazioporto' && !st.lancioAvviato) h += '<span class="btn ok" data-az="lancio">AVVIA LANCIO<u>500 RTM / 300 LEG / 100 DAT</u></span>';
@@ -602,6 +635,11 @@
 
     riga: function (a, b, cls) {
       return '<div class="r"><span>' + a + '</span><span class="' + (cls || '') + '">' + b + '</span></div>';
+    },
+
+    /* Riga per valori lunghi: etichetta sopra, testo a capo sotto. */
+    rigaLunga: function (a, b, cls) {
+      return '<div class="r lunga"><span>' + a + '</span><span class="' + (cls || '') + '">' + b + '</span></div>';
     },
 
     /* ---------- RICERCA ---------- */
@@ -637,17 +675,47 @@
       h += '<div class="s-nome c-core">' + liv.nome + '</div>';
       h += '<div class="s-sub dim">SETTORE-7 -- CICLO ' + Math.floor(st.ciclo) + ' -- RAGGIO OPERATIVO ' + liv.raggio + '</div>';
 
-      h += '<div class="cat">-- AVANZAMENTO --</div><div class="tab">';
-      if (next) {
-        var pp = Math.min(1, st.pop / next.pop), pe = Math.min(1, st.edifici.length / next.edifici);
-        h += this.riga('PROSSIMO: ' + next.nome, '');
-        h += this.riga('COLONI', R.barra(pp, 10) + ' ' + st.pop + '/' + next.pop, pp >= 1 ? 'ok' : '');
-        h += this.riga('STRUTTURE', R.barra(pe, 10) + ' ' + st.edifici.length + '/' + next.edifici, pe >= 1 ? 'ok' : '');
+      h += '<div class="cat">-- NUCLEO DI COMANDO --</div><div class="tab">';
+      h += this.riga('GRADO ATTUALE', 'MK-' + st.livello + ' / MK-' + D.LEVELS.length);
+      if (st.nucleoUp) {
+        var fr = 1 - st.nucleoUp.resta / st.nucleoUp.totale;
+        h += this.riga('CANTIERE MK-' + st.nucleoUp.a, R.barra(fr, 10) + ' ' + Math.ceil(st.nucleoUp.resta) + ' cicli', 'ok');
+        h += '<div class="dim pad">Durante i lavori il Nucleo rende meta e le sue difese sono smontate: e il momento peggiore per un raid.</div>';
+      } else if (next) {
+        h += this.riga('PROSSIMO GRADO', 'MK-' + next.lvl + ' -- ' + next.nome);
+        for (var k in next.costo) {
+          var ho = st.res[k] || 0, serve = next.costo[k];
+          h += this.riga(k.toUpperCase(), n1(ho) + ' / ' + serve, ho >= serve ? 'ok' : 'no');
+        }
+        h += this.riga('DURATA LAVORI', next.tempo + ' cicli');
       } else {
-        h += this.riga('LIVELLO MASSIMO', 'NEXUS PRIME', 'ok');
-        h += '<div class="dim pad">Costruisci lo SPAZIOPORTO ESODO e avvia il lancio per completare la partita.</div>';
+        h += this.riga('GRADO MASSIMO', 'NEXUS PRIME', 'ok');
       }
       h += '</div>';
+
+      if (!st.nucleoUp && next) {
+        /* Cosa cambia con il grado successivo: e' la bussola della partita. */
+        var nuove = [], ampliate = [];
+        D.BUILDINGS.forEach(function (def) {
+          if (!def.limiti) return;
+          var ora = def.limiti[st.livello - 1], poi = def.limiti[next.lvl - 1];
+          if (ora === 0 && poi > 0) nuove.push(def.nome);
+          else if (poi > ora) ampliate.push(def.nome + ' ' + ora + '>' + poi);
+        });
+        h += '<div class="cat">-- COSA SBLOCCA MK-' + next.lvl + ' --</div><div class="tab">';
+        if (nuove.length) h += this.rigaLunga('NUOVE STRUTTURE', nuove.join(', '), 'ok');
+        h += this.riga('PERIMETRO', 'raggio ' + D.LEVELS[st.livello - 1].raggio + ' > ' + next.raggio, 'ok');
+        h += this.riga('MAGAZZINI', '+60% su ogni risorsa', 'ok');
+        h += this.riga('TETTO POTENZIAMENTI', 'strutture fino a MK-' + Math.min(5, next.lvl), 'ok');
+        if (ampliate.length) h += this.rigaLunga('PIU POSTI PER', ampliate.slice(0, 6).join(', ') + (ampliate.length > 6 ? '...' : ''), 'ok');
+        h += '</div>';
+        var pn2 = E.puoPotenziareNucleo();
+        h += '<div class="azioni"><span class="btn ' + (pn2.ok ? 'ok' : 'dis') + '" data-az="potenzia-nucleo">' +
+             'POTENZIA IL NUCLEO A MK-' + next.lvl + '<u>' + (pn2.ok ? esc(E.testoCosto(next.costo)) + ' -- ' + next.tempo + ' cicli' : esc(pn2.motivo)) + '</u></span></div>';
+      }
+      if (!next && !st.nucleoUp) {
+        h += '<div class="dim pad">Costruisci lo SPAZIOPORTO ESODO e avvia il lancio per completare la partita.</div>';
+      }
 
       h += '<div class="cat">-- POPOLAZIONE --</div><div class="tab">';
       h += this.riga('COLONI', st.pop);
@@ -755,10 +823,21 @@
       h += '<div class="scroll aiuto">';
 
       h += '<div class="cat">-- 1. OBIETTIVO --</div>' +
-        '<p>Portare il Settore-7 da avamposto a <b>NEXUS PRIME</b> (livello 10), completare la ricerca <b>PROTOCOLLO ESODO</b>, costruire lo <b>SPAZIOPORTO ESODO</b> e avviare il lancio. Il conto alla rovescia dura 60 cicli: vanno difesi.</p>' +
+        '<p>Portare il <b>NUCLEO DI COMANDO</b> dal grado MK-1 a MK-10 (<b>NEXUS PRIME</b>), completare la ricerca <b>PROTOCOLLO ESODO</b>, costruire lo <b>SPAZIOPORTO ESODO</b> e avviare il lancio. Il conto alla rovescia dura 60 cicli: vanno difesi.</p>' +
         '<p>Si perde in un modo solo: restare senza coloni.</p>';
 
-      h += '<div class="cat">-- 2. COMANDI --</div>' +
+      h += '<div class="cat">-- 2. IL NUCLEO DI COMANDO --</div>' +
+        '<p>E il cuore della progressione: il <b>grado del Nucleo e il livello del settore</b>. Non sale da solo, lo potenzi tu, pagando risorse e aspettando che i lavori finiscano.</p>' +
+        '<p>Ogni grado del Nucleo:<br>' +
+        '-- estende il <b>perimetro edificabile</b>;<br>' +
+        '-- alza del <b>60%</b> il tetto di ogni magazzino;<br>' +
+        '-- <b>sblocca nuove strutture</b>;<br>' +
+        '-- aumenta <b>quante</b> strutture di ogni tipo puoi possedere;<br>' +
+        '-- alza il <b>tetto dei potenziamenti</b>: nessuna struttura puo superare il grado del Nucleo.</p>' +
+        '<p>Il pannello CITTA mostra sempre costo, durata e cosa sblocca il grado successivo. <b>Mentre il cantiere e aperto il Nucleo rende meta e le sue difese sono smontate</b>: non aprirlo con i predoni alle porte e le torrette scariche.</p>' +
+        '<p class="dim">Il collo di bottiglia non e mai il terreno libero: sono i limiti per grado. Se non puoi piu costruire quello che ti serve, la risposta e quasi sempre potenziare il Nucleo.</p>';
+
+      h += '<div class="cat">-- 3. COMANDI --</div>' +
         '<p><b>Spostarsi:</b> trascina la mappa con un dito.<br>' +
         '<b>Selezionare:</b> tocca una cella.<br>' +
         '<b>Confermare:</b> tocca <i>di nuovo</i> la stessa cella (scansiona un edificio, conferma una costruzione, sgombera macerie).<br>' +
@@ -766,24 +845,24 @@
         '<b>Velocita:</b> il tasto in alto a destra cicla fra pausa, x1, x2 e x4.</p>' +
         '<p class="dim">Con una tastiera collegata: frecce per il cursore, Invio conferma, Esc annulla, + e - per lo zoom.</p>';
 
-      h += '<div class="cat">-- 3. RISORSE --</div>' +
+      h += '<div class="cat">-- 4. RISORSE --</div>' +
         '<p><b>RTM rottami</b> -- materiale base di ogni costruzione.<br>' +
         '<b>H2O acqua</b> -- consumata dai coloni a ogni ciclo.<br>' +
         '<b>BIO biomassa</b> -- il cibo, consumato dai coloni.<br>' +
         '<b>LEG leghe</b> -- raffinate dalla fonderia, servono alle strutture avanzate.<br>' +
         '<b>DAT dati</b> -- alimentano la ricerca.</p>' +
-        '<p>Ogni risorsa ha un <b>tetto di stoccaggio</b>: quello che produci oltre il tetto va perso. Il tetto cresce con il livello della citta e con i DEPOSITI CORAZZATI. I progetti di fine partita costano molto: senza depositi rischi di non arrivarci mai.</p>';
+        '<p>Ogni risorsa ha un <b>tetto di stoccaggio</b>: quello che produci oltre il tetto va perso. Il tetto cresce del 60% a ogni grado del Nucleo, e i DEPOSITI CORAZZATI lo alzano ancora. I potenziamenti di fine partita costano decine di migliaia di unita: senza depositi non riuscirai ad accumularli.</p>';
 
-      h += '<div class="cat">-- 4. ENERGIA --</div>' +
+      h += '<div class="cat">-- 5. ENERGIA --</div>' +
         '<p>L energia <b>non si accumula</b>. E un bilancio istantaneo fra produzione e richiesta, mostrato come NRG nella barra in alto.</p>' +
         '<p>Se la richiesta supera la produzione, <b>tutte</b> le strutture consumatrici rendono in proporzione: al 50% di copertura, meta resa ovunque. Tieni sempre un margine, e ricorda che le torrette senza corrente non sparano.</p>';
 
-      h += '<div class="cat">-- 5. COLONI E ADDETTI --</div>' +
+      h += '<div class="cat">-- 6. COLONI E ADDETTI --</div>' +
         '<p>Il <b>65%</b> dei coloni costituisce la forza lavoro. La barra in alto mostra <b>LAV posti/forza</b>: se i posti di lavoro superano la forza disponibile, la resa cala ovunque in proporzione.</p>' +
         '<p>I coloni crescono da soli se ci sono alloggi liberi, saldo positivo di acqua e cibo e morale almeno 45. La crescita e proporzionale alla popolazione: piu la citta e grande, piu accelera.</p>' +
         '<p>Il <b>morale</b> sale con cibo e acqua in eccesso, monumenti, centri medici e mercati; scende con carenze, blackout, sovraffollamento e contaminazione. Il morale moltiplica la resa di tutto (da x0,70 a x1,00).</p>';
 
-      h += '<div class="cat">-- 6. TERRENO E ADIACENZE --</div>' +
+      h += '<div class="cat">-- 7. TERRENO E ADIACENZE --</div>' +
         '<p>Le <b>macerie</b> vanno sgomberate prima di costruire, e danno rottami. <b>Speroni</b> e <b>pozze tossiche</b> non sono edificabili, ma le pozze servono: il POZZO PROFONDO va costruito adiacente a una.</p>' +
         '<p>Bonus di posizione:<br>' +
         '-- <b>TRACCIATO</b> adiacente: +15% a qualsiasi struttura;<br>' +
@@ -791,22 +870,23 @@
         '-- <b>SERRA IDROPONICA</b> vicino a condensatore (+15%) o pozzo (+20%).</p>' +
         '<p>Il pannello SCANSIONE elenca sempre i bonus attivi su quella struttura.</p>';
 
-      h += '<div class="cat">-- 7. POTENZIAMENTI --</div>' +
-        '<p>Ogni struttura sale fino a <b>MK-5</b>: +40% di resa per livello, fino a x2,6, sullo stesso spazio. Salgono anche alloggi, difesa e capienza dei depositi. Il costo cresce del 75% a ogni grado.</p>' +
-        '<p>Quando il terreno finisce, potenziare e l unico modo di crescere: e la strategia prevista per gli ultimi livelli.</p>';
+      h += '<div class="cat">-- 8. POTENZIAMENTI --</div>' +
+        '<p>Ogni struttura sale fino a <b>MK-5</b>: +40% di resa per grado, fino a x2,6, sullo stesso spazio. Salgono anche alloggi, difesa e capienza dei depositi. Il costo cresce del 75% a ogni grado.</p>' +
+        '<p><b>Tetto:</b> nessuna struttura puo superare il grado del Nucleo. Con il Nucleo a MK-3 tutto il resto si ferma a MK-3, per quante risorse tu abbia.</p>' +
+        '<p>Quando il terreno e i limiti finiscono, potenziare e l unico modo di crescere: e la strategia prevista per gli ultimi gradi.</p>';
 
-      h += '<div class="cat">-- 8. DIFESA E INCURSIONI --</div>' +
+      h += '<div class="cat">-- 9. DIFESA E INCURSIONI --</div>' +
         '<p>I predoni attaccano ogni 60-130 cicli e la loro forza cresce con il livello della citta (circa 10 + 14 per livello). Il pannello CITTA mostra la stima del prossimo raid accanto alla tua difesa.</p>' +
         '<p>Se la difesa regge, il raid viene respinto e recuperi bottino. Se non regge, perdi rottami, strutture danneggiate e coloni. Torrette, barriere e il progetto RETE DI PUNTAMENTO (+60%) sono la risposta.</p>';
 
-      h += '<div class="cat">-- 9. CONTAMINAZIONE --</div>' +
+      h += '<div class="cat">-- 10. CONTAMINAZIONE --</div>' +
         '<p>Fonderie, reattori, officine e raccoglitori emettono contaminazione; TORRI DI FILTRAGGIO e RIGENERATORI ATMOSFERICI la assorbono. Oltre il <b>55%</b> i coloni cominciano a morire, e il morale scende comunque in proporzione.</p>';
 
-      h += '<div class="cat">-- 10. RICERCA --</div>' +
+      h += '<div class="cat">-- 11. RICERCA --</div>' +
         '<p>Dieci progetti in albero: alcuni richiedono un progetto precedente, tutti richiedono un livello citta minimo. Sbloccano bonus permanenti e tre strutture chiave (reattore, arcologia, spazioporto).</p>' +
         '<p>Ogni progetto completato recupera anche un <b>frammento d archivio</b>: la storia del Settore-7 si legge nel pannello STORIA.</p>';
 
-      h += '<div class="cat">-- 11. STRATEGIA D APERTURA --</div>' +
+      h += '<div class="cat">-- 12. STRATEGIA D APERTURA --</div>' +
         '<p>Un ordine che funziona:</p>' +
         '<p>1. Sgombera due o tre celle di macerie vicine al Nucleo.<br>' +
         '2. Un RACCOGLITORE adiacente alle macerie rimaste.<br>' +
@@ -814,10 +894,11 @@
         '4. Un CONDENSATORE e una MICO-FARM: acqua e cibo in positivo.<br>' +
         '5. Due RIFUGI: piu coloni, quindi piu addetti.<br>' +
         '6. Tracciati fra le strutture per il +15%.<br>' +
-        '7. Un RELE DATI appena la rete regge: senza dati non c e ricerca.</p>' +
+        '7. Un RELE DATI appena la rete regge: senza dati non c e ricerca.<br>' +
+        '8. Appena hai 250 RTM da parte, apri il cantiere del NUCLEO MK-2.</p>' +
         '<p class="dim">Regola generale: risolvi sempre per primo il vincolo peggiore. Se NRG e rosso costruisci energia, se LAV e in deficit costruisci alloggi, se H2O o BIO sono negativi costruisci acqua o cibo. Tutto il resto puo aspettare.</p>';
 
-      h += '<div class="cat">-- 12. SALVATAGGIO --</div>' +
+      h += '<div class="cat">-- 13. SALVATAGGIO --</div>' +
         '<p>La partita si salva da sola ogni 15 cicli, quando esci e quando metti l app in secondo piano. Il salvataggio resta su questo dispositivo. Dal MENU puoi salvare e caricare a mano.</p>';
 
       h += '</div>';

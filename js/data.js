@@ -193,7 +193,7 @@
   var BUILDINGS = [
     {
       id: 'nucleo', nome: 'NUCLEO DI COMANDO', cat: 'COMANDO', glyph: '@',
-      w: 2, h: 2, color: 'core', art: ART.nucleo, maxLvl: 5, unique: true,
+      w: 2, h: 2, color: 'core', art: ART.nucleo, maxLvl: 10, unique: true,
       unlock: 0, cost: { rtm: 0 },
       jobs: 0, housing: 10, produce: { rtm: 0.6, nrg: 18 }, consume: {},
       storage: { rtm: 0, h2o: 0, bio: 0, leg: 0, dat: 0 },
@@ -203,6 +203,7 @@
     {
       id: 'strada', nome: 'TRACCIATO', cat: 'LOGISTICA', glyph: '+',
       w: 1, h: 1, color: 'road', art: null, maxLvl: 1, road: true,
+      limiti: [20, 40, 60, 80, 100, 120, 140, 160, 180, 220],
       unlock: 1, cost: { rtm: 5 },
       jobs: 0, housing: 0, produce: {}, consume: {},
       contamina: 0, morale: 0, difesa: 0,
@@ -211,6 +212,7 @@
     {
       id: 'rifugio', nome: 'RIFUGIO PRESSURIZZATO', cat: 'ABITATIVO', glyph: 'n',
       w: 1, h: 1, color: 'house', art: ART.rifugio, maxLvl: 5,
+      limiti: [4, 7, 10, 13, 16, 19, 22, 25, 28, 32],
       unlock: 1, cost: { rtm: 30 },
       jobs: 0, housing: 6, produce: {}, consume: { nrg: 1 },
       contamina: 0, morale: 0, difesa: 0,
@@ -219,6 +221,7 @@
     {
       id: 'solare', nome: 'ARRAY FOTOVOLTAICO', cat: 'ENERGIA', glyph: 's',
       w: 1, h: 1, color: 'energy', art: ART.solare, maxLvl: 5,
+      limiti: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
       unlock: 1, cost: { rtm: 45 },
       jobs: 0, housing: 0, produce: { nrg: 7 }, consume: {},
       contamina: 0, morale: 0, difesa: 0,
@@ -227,6 +230,7 @@
     {
       id: 'raccoglitore', nome: 'RACCOGLITORE DI ROTTAMI', cat: 'INDUSTRIA', glyph: 'r',
       w: 1, h: 1, color: 'scrap', art: ART.raccoglitore, maxLvl: 5,
+      limiti: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
       unlock: 1, cost: { rtm: 25 },
       jobs: 1, housing: 0, produce: { rtm: 1.2 }, consume: { nrg: 3 },
       contamina: 0.4, morale: 0, difesa: 0,
@@ -236,6 +240,7 @@
     {
       id: 'condensatore', nome: 'CONDENSATORE ATMOSFERICO', cat: 'ACQUA', glyph: 'c',
       w: 1, h: 1, color: 'water', art: ART.condensatore, maxLvl: 5,
+      limiti: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
       unlock: 1, cost: { rtm: 35 },
       jobs: 1, housing: 0, produce: { h2o: 1.0 }, consume: { nrg: 3 },
       contamina: 0, morale: 0, difesa: 0,
@@ -244,6 +249,7 @@
     {
       id: 'micofarm', nome: 'MICO-FARM', cat: 'CIBO', glyph: 'm',
       w: 1, h: 1, color: 'food', art: ART.micofarm, maxLvl: 5,
+      limiti: [2, 3, 4, 5, 6, 7, 8, 8, 8, 8],
       unlock: 1, cost: { rtm: 30 },
       jobs: 1, housing: 0, produce: { bio: 0.8 }, consume: { nrg: 2, h2o: 0.2 },
       contamina: 0, morale: 0, difesa: 0,
@@ -252,6 +258,7 @@
     {
       id: 'deposito', nome: 'DEPOSITO CORAZZATO', cat: 'LOGISTICA', glyph: 'd',
       w: 1, h: 1, color: 'struct', art: ART.deposito, maxLvl: 5,
+      limiti: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       unlock: 1, cost: { rtm: 70 },
       jobs: 0, housing: 0, produce: {}, consume: { nrg: 1 },
       storage: { rtm: 400, h2o: 200, bio: 200, leg: 150, dat: 100 },
@@ -261,6 +268,7 @@
     {
       id: 'eolica', nome: 'TURBINA EOLICA', cat: 'ENERGIA', glyph: 'w',
       w: 1, h: 1, color: 'energy', art: ART.eolica, maxLvl: 5,
+      limiti: [0, 2, 3, 5, 7, 9, 11, 13, 15, 18],
       unlock: 2, cost: { rtm: 70 },
       jobs: 0, housing: 0, produce: { nrg: 11 }, consume: {},
       contamina: 0, morale: 0, difesa: 0,
@@ -269,6 +277,7 @@
     {
       id: 'pozzo', nome: 'POZZO PROFONDO', cat: 'ACQUA', glyph: 'p',
       w: 2, h: 1, color: 'water', art: ART.pozzo, maxLvl: 5,
+      limiti: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       unlock: 2, cost: { rtm: 110, leg: 5 },
       jobs: 2, housing: 0, produce: { h2o: 3.6 }, consume: { nrg: 7 },
       contamina: 0.2, morale: 0, difesa: 0,
@@ -278,6 +287,7 @@
     {
       id: 'idroponica', nome: 'SERRA IDROPONICA', cat: 'CIBO', glyph: 'h',
       w: 2, h: 1, color: 'food', art: ART.idroponica, maxLvl: 5,
+      limiti: [0, 1, 2, 3, 4, 6, 8, 10, 12, 14],
       unlock: 2, cost: { rtm: 120, leg: 10 },
       jobs: 3, housing: 0, produce: { bio: 3.2 }, consume: { nrg: 9, h2o: 1.0 },
       contamina: 0, morale: 1, difesa: 0,
@@ -287,6 +297,7 @@
     {
       id: 'antenna', nome: 'RELE DATI', cat: 'SCIENZA', glyph: 'y',
       w: 1, h: 1, color: 'data', art: ART.antenna, maxLvl: 5,
+      limiti: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
       unlock: 2, cost: { rtm: 90, leg: 8 },
       jobs: 1, housing: 0, produce: { dat: 0.16 }, consume: { nrg: 5 },
       contamina: 0, morale: 0, difesa: 0,
@@ -295,6 +306,7 @@
     {
       id: 'torretta', nome: 'TORRETTA AUTOMATICA', cat: 'DIFESA', glyph: 't',
       w: 1, h: 1, color: 'danger', art: ART.torretta, maxLvl: 5,
+      limiti: [0, 2, 3, 4, 6, 8, 10, 12, 14, 16],
       unlock: 2, cost: { rtm: 80, leg: 15 },
       jobs: 1, housing: 0, produce: {}, consume: { nrg: 4 },
       contamina: 0, morale: 0, difesa: 12,
@@ -303,6 +315,7 @@
     {
       id: 'muro', nome: 'BARRIERA BLINDATA', cat: 'DIFESA', glyph: '=',
       w: 1, h: 1, color: 'struct', art: ART.muro, maxLvl: 3,
+      limiti: [0, 10, 20, 30, 45, 60, 75, 90, 105, 125],
       unlock: 2, cost: { rtm: 20 },
       jobs: 0, housing: 0, produce: {}, consume: {},
       contamina: 0, morale: 0, difesa: 3,
@@ -311,6 +324,7 @@
     {
       id: 'officina', nome: 'OFFICINA DRONI', cat: 'INDUSTRIA', glyph: 'o',
       w: 2, h: 1, color: 'scrap', art: ART.officina, maxLvl: 5,
+      limiti: [0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
       unlock: 3, cost: { rtm: 140, leg: 20 },
       jobs: 3, housing: 0, produce: { rtm: 3.6 }, consume: { nrg: 9 },
       contamina: 0.8, morale: 0, difesa: 0,
@@ -319,6 +333,7 @@
     {
       id: 'fonderia', nome: 'FONDERIA A ARCO', cat: 'INDUSTRIA', glyph: 'f',
       w: 2, h: 1, color: 'alloy', art: ART.fonderia, maxLvl: 5,
+      limiti: [0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
       unlock: 3, cost: { rtm: 160 },
       jobs: 4, housing: 0, produce: { leg: 0.85 }, consume: { nrg: 12, rtm: 2.2 },
       contamina: 2.2, morale: 0, difesa: 0,
@@ -327,6 +342,7 @@
     {
       id: 'laboratorio', nome: 'LABORATORIO XENO', cat: 'SCIENZA', glyph: 'l',
       w: 2, h: 1, color: 'data', art: ART.laboratorio, maxLvl: 5,
+      limiti: [0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
       unlock: 3, cost: { rtm: 190, leg: 25 },
       jobs: 4, housing: 0, produce: { dat: 0.55 }, consume: { nrg: 13, h2o: 0.3 },
       contamina: 0.4, morale: 0, difesa: 0,
@@ -336,14 +352,16 @@
     {
       id: 'filtro', nome: 'TORRE DI FILTRAGGIO', cat: 'AMBIENTE', glyph: 'F',
       w: 1, h: 1, color: 'toxic', art: ART.filtro, maxLvl: 5,
-      unlock: 3, cost: { rtm: 100, leg: 12 },
+      limiti: [0, 1, 2, 3, 5, 7, 9, 11, 13, 15],
+      unlock: 2, cost: { rtm: 100, leg: 12 },
       jobs: 1, housing: 0, produce: {}, consume: { nrg: 6 },
-      assorbe: 3.0, contamina: 0, morale: 1, difesa: 0,
+      assorbe: 4.0, contamina: 0, morale: 1, difesa: 0,
       desc: 'Colonne di zeoliti che catturano particolato e isotopi. Riduce la contaminazione del settore, che avvelena morale e coloni.'
     },
     {
       id: 'mercato', nome: 'MERCATO NERO', cat: 'LOGISTICA', glyph: '$',
       w: 2, h: 1, color: 'gold', art: ART.mercato, maxLvl: 5,
+      limiti: [0, 0, 0, 1, 2, 2, 3, 3, 4, 4],
       unlock: 4, cost: { rtm: 150, leg: 15 },
       jobs: 2, housing: 0, produce: { rtm: 2.6, bio: 0.4 }, consume: { nrg: 6 },
       contamina: 0, morale: 3, difesa: 0,
@@ -352,6 +370,7 @@
     {
       id: 'medico', nome: 'CENTRO MEDICO', cat: 'ABITATIVO', glyph: 'C',
       w: 2, h: 1, color: 'house', art: ART.medico, maxLvl: 5,
+      limiti: [0, 0, 0, 1, 2, 3, 4, 5, 6, 7],
       unlock: 4, cost: { rtm: 170, leg: 20 },
       jobs: 3, housing: 0, produce: {}, consume: { nrg: 10, h2o: 0.6 },
       cura: 1, contamina: 0, morale: 8, difesa: 0,
@@ -360,6 +379,7 @@
     {
       id: 'monumento', nome: 'MONOLITE DELLA MEMORIA', cat: 'AMBIENTE', glyph: 'A',
       w: 1, h: 1, color: 'gold', art: ART.monumento, maxLvl: 3,
+      limiti: [0, 0, 0, 0, 1, 1, 2, 2, 3, 3],
       unlock: 5, cost: { rtm: 220, leg: 45 },
       jobs: 0, housing: 0, produce: {}, consume: {},
       contamina: 0, morale: 12, difesa: 0,
@@ -368,6 +388,7 @@
     {
       id: 'reattore', nome: 'REATTORE A FUSIONE', cat: 'ENERGIA', glyph: 'R',
       w: 2, h: 2, color: 'energy', art: ART.reattore, maxLvl: 5,
+      limiti: [0, 0, 0, 0, 1, 1, 2, 3, 4, 5],
       unlock: 5, tech: 'fusione', cost: { rtm: 420, leg: 130 },
       jobs: 6, housing: 0, produce: { nrg: 95 }, consume: { h2o: 1.2 },
       contamina: 3.5, morale: 0, difesa: 0,
@@ -376,6 +397,7 @@
     {
       id: 'arcologia', nome: 'ARCOLOGIA', cat: 'ABITATIVO', glyph: 'H',
       w: 2, h: 2, color: 'house', art: ART.arcologia, maxLvl: 5,
+      limiti: [0, 0, 0, 0, 0, 2, 4, 6, 8, 12],
       unlock: 6, tech: 'arcologie', cost: { rtm: 620, leg: 210 },
       jobs: 2, housing: 45, produce: {}, consume: { nrg: 26, h2o: 2.0 },
       contamina: 0, morale: 5, difesa: 2,
@@ -384,6 +406,7 @@
     {
       id: 'rigeneratore', nome: 'RIGENERATORE ATMOSFERICO', cat: 'AMBIENTE', glyph: 'O',
       w: 2, h: 2, color: 'toxic', art: ART.rigeneratore, maxLvl: 5,
+      limiti: [0, 0, 0, 0, 0, 0, 1, 2, 3, 4],
       unlock: 7, tech: 'nanofiltri', cost: { rtm: 540, leg: 170 },
       jobs: 5, housing: 0, produce: {}, consume: { nrg: 32, h2o: 1.0 },
       assorbe: 16, contamina: 0, morale: 6, difesa: 0,
@@ -392,10 +415,11 @@
     {
       id: 'spazioporto', nome: 'SPAZIOPORTO ESODO', cat: 'COMANDO', glyph: 'X',
       w: 3, h: 2, color: 'core', art: ART.spazioporto, maxLvl: 1, unique: true,
-      unlock: 9, tech: 'esodo', cost: { rtm: 2200, leg: 900, dat: 320 },
+      limiti: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      unlock: 10, tech: 'esodo', cost: { rtm: 18000, leg: 4500, dat: 900 },
       jobs: 20, housing: 0, produce: {}, consume: { nrg: 90, h2o: 3, leg: 1.5 },
       contamina: 2, morale: 15, difesa: 0,
-      desc: 'La rampa punta alle stelle. Completala, riempi i serbatoi e il Settore-7 non sara piu un rifugio ma un punto di partenza. VITTORIA: avvia il lancio dal pannello di scansione.'
+      desc: 'Richiede il NUCLEO al grado massimo MK-10. La rampa punta alle stelle. Completala, riempi i serbatoi e il Settore-7 non sara piu un rifugio ma un punto di partenza. VITTORIA: avvia il lancio dal pannello di scansione.'
     }
   ];
 
@@ -429,16 +453,16 @@
      LIVELLI CITTA'
      --------------------------------------------------------- */
   var LEVELS = [
-    { lvl: 1,  nome: 'AVAMPOSTO',            pop: 0,   edifici: 0,  raggio: 4  },
-    { lvl: 2,  nome: 'INSEDIAMENTO',         pop: 14,  edifici: 6,  raggio: 5  },
-    { lvl: 3,  nome: 'BORGO DI FERRO',       pop: 32,  edifici: 13, raggio: 6  },
-    { lvl: 4,  nome: 'DISTRETTO',            pop: 62,  edifici: 21, raggio: 7  },
-    { lvl: 5,  nome: 'CITTADELLA',           pop: 110, edifici: 29, raggio: 8  },
-    { lvl: 6,  nome: 'NEXO URBANO',          pop: 180, edifici: 37, raggio: 9  },
-    { lvl: 7,  nome: 'METROPOLI DI CENERE',  pop: 280, edifici: 46, raggio: 11 },
-    { lvl: 8,  nome: 'CONURBAZIONE',         pop: 380, edifici: 55, raggio: 13 },
-    { lvl: 9,  nome: 'ARCOPOLI',             pop: 520, edifici: 64, raggio: 15 },
-    { lvl: 10, nome: 'NEXUS PRIME',          pop: 700, edifici: 74, raggio: 24 }
+    { lvl: 1,  nome: 'AVAMPOSTO',           raggio: 4,  costo: {},                                      tempo: 0   },
+    { lvl: 2,  nome: 'INSEDIAMENTO',        raggio: 5,  costo: { rtm: 250 },                            tempo: 20  },
+    { lvl: 3,  nome: 'BORGO DI FERRO',      raggio: 6,  costo: { rtm: 800 },                            tempo: 35  },
+    { lvl: 4,  nome: 'DISTRETTO',           raggio: 7,  costo: { rtm: 1300, leg: 200 },                 tempo: 55  },
+    { lvl: 5,  nome: 'CITTADELLA',          raggio: 8,  costo: { rtm: 2100, leg: 500 },                 tempo: 80  },
+    { lvl: 6,  nome: 'NEXO URBANO',         raggio: 9,  costo: { rtm: 3400, leg: 900,  dat: 100 },      tempo: 110 },
+    { lvl: 7,  nome: 'METROPOLI DI CENERE', raggio: 11, costo: { rtm: 5400, leg: 1500, dat: 250 },      tempo: 150 },
+    { lvl: 8,  nome: 'CONURBAZIONE',        raggio: 13, costo: { rtm: 8600, leg: 2500, dat: 450 },      tempo: 200 },
+    { lvl: 9,  nome: 'ARCOPOLI',            raggio: 15, costo: { rtm: 13800, leg: 4000, dat: 700 },     tempo: 260 },
+    { lvl: 10, nome: 'NEXUS PRIME',         raggio: 24, costo: { rtm: 22000, leg: 6500, dat: 1100 },    tempo: 340 }
   ];
 
   /* ---------------------------------------------------------
