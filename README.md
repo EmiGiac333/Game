@@ -12,9 +12,12 @@
 # NEXUS-7
 
 City builder in **grafica ASCII pura**, ambientato in un futuro post-apocalittico.
-Anno 2187, dopo il Grande Silenzio: sei l'Amministratore del Settore-7 e devi
-trasformare un modulo di atterraggio in una metropoli, fino a costruire lo
-Spazioporto Esodo e lasciare il pianeta.
+
+Anno 2187. Otto persone si svegliano in un modulo di atterraggio, in mezzo a
+quaranta chilometri di cenere. In orbita, un segnale ripete una sola parola:
+*ATTENDETE*. Tu sei l'Amministratore del Settore-7 e devi ricostruire una città —
+ma più cresce, più diventa difficile ignorare la domanda che nessuno ha ancora
+posto: **cos'è successo, ottant'anni fa, alle 04:11?**
 
 Gira nel browser, **è pensato per Android** (touch, schermo verticale, offline),
 non richiede installazione né connessione dopo la prima apertura.
@@ -42,6 +45,38 @@ Poi apri `http://<ip-del-pc>:8000` dal telefono sulla stessa rete Wi-Fi.
 Funziona, ma da `file://` il salvataggio offline via service worker resta disattivato.
 
 I salvataggi usano `localStorage` del browser: restano sul dispositivo.
+I salvataggi creati prima dell'aggiunta della campagna vengono migrati
+automaticamente, senza perdere la partita in corso.
+
+---
+
+## Tutorial e manuale
+
+Una nuova partita comincia con un **tutorial interattivo in 14 passi**: ogni passo
+spiega una meccanica e propone un obiettivo, che si completa da solo quando lo
+esegui davvero in gioco. Si può nascondere in qualsiasi momento e **riprendere o
+rifare dal MENU**.
+
+Il **MANUALE COMPLETO** (12 sezioni: risorse, energia, addetti, adiacenze,
+potenziamenti, difesa, contaminazione, ricerca, strategia d'apertura…) è sempre
+raggiungibile dal MENU, anche a partita avanzata.
+
+---
+
+## La storia
+
+La campagna si svela mentre giochi, e resta tutta rileggibile nel pannello **STORIA**.
+
+- **10 capitoli** del registro dell'Amministratore, uno per ogni promozione della città;
+- **14 frammenti d'archivio** — referti, verbali, trascrizioni radio, lettere mai
+  spedite — recuperati completando ricerche e attraversando certi eventi;
+- **2 epiloghi**, a seconda di come finisce.
+
+Le voci non ancora ottenute restano visibili ma oscurate, così sai sempre quanto
+manca. Un asterisco sulla tab STORIA segnala che c'è qualcosa di nuovo da leggere.
+
+> *«Voi non sapete cosa avete riacceso.»*
+> — graffito sulla parete est del deposito
 
 ---
 
@@ -54,7 +89,7 @@ I salvataggi usano `localStorage` del browser: restano sul dispositivo.
 | Confermare (scansiona / costruisci / sgombera) | tocca **di nuovo** la stessa cella |
 | Zoom | `[-]` `[+]` in basso a destra — sotto il minimo si passa alla **mappa tattica** |
 | Velocità | il pulsante `x1` in alto a destra cicla `|| → x1 → x2 → x4` |
-| Pannelli | barra in basso: COSTRUISCI, SCANSIONE, RICERCA, CITTÀ, DIARIO, MENU |
+| Pannelli | barra in basso: COSTRUISCI, SCANSIONE, RICERCA, CITTÀ, STORIA, DIARIO, MENU |
 
 Con tastiera collegata: frecce per il cursore, `Invio` conferma, `Esc` annulla, `+`/`-` zoom.
 
@@ -120,6 +155,8 @@ Dieci livelli di città, ognuno estende il perimetro edificabile e sblocca nuove
 **Vittoria:** ricerca PROTOCOLLO ESODO, costruisci lo SPAZIOPORTO ESODO,
 apri la sua SCANSIONE e avvia il lancio. Sessanta cicli di conto alla rovescia — e difendilo.
 
+**Sconfitta:** restare senza coloni. Anche questo ha il suo epilogo.
+
 ---
 
 ## Scansione degli edifici
@@ -141,6 +178,8 @@ incorniciata, descrizione, e tutte le caratteristiche in chiaro —
 index.html              shell dell'app
 css/style.css           tema terminale CRT, layout mobile-first
 js/data.js              risorse, terreni, 25 edifici con arte ASCII, tecnologie, livelli, eventi
+js/story.js             10 capitoli, 14 frammenti d'archivio, 2 epiloghi
+js/tutorial.js          14 passi guidati con obiettivi verificati sullo stato di gioco
 js/engine.js            stato, generazione mappa, simulazione economica, eventi, salvataggio
 js/render.js            renderer ASCII (mappa tattica e di dettaglio)
 js/ui.js                HUD, pannelli, input touch, ciclo di gioco

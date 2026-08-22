@@ -1,8 +1,9 @@
 /* NEXUS-7 :: service worker -- gioco disponibile offline dopo la prima apertura. */
-var CACHE = 'nexus7-v1';
+var CACHE = 'nexus7-v2';
 var FILES = [
   './', './index.html', './css/style.css', './icon.svg', './manifest.webmanifest',
-  './js/data.js', './js/engine.js', './js/render.js', './js/ui.js', './js/main.js'
+  './js/data.js', './js/story.js', './js/tutorial.js', './js/engine.js',
+  './js/render.js', './js/ui.js', './js/main.js'
 ];
 
 self.addEventListener('install', function (e) {

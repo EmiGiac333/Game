@@ -9,6 +9,7 @@
   var D = global.DATA;
   var MAP_W = 28, MAP_H = 18;
   var SAVE_KEY = 'nexus7.save.v1';
+  var SAVE_VER = 2;
   var CICLO_MS = 1000;
 
   /* ---- RNG deterministico (mulberry32) ---- */
@@ -96,7 +97,7 @@
       seed = seed || (Date.now() & 0x7fffffff);
       this.rng = rngFrom(seed ^ 0x9e3779b9);
       var st = {
-        v: 1,
+        v: SAVE_VER,
         seed: seed,
         ciclo: 0,
         livello: 1,
@@ -119,6 +120,9 @@
       var cx = Math.floor(MAP_W / 2) - 1, cy = Math.floor(MAP_H / 2) - 1;
       this.piazza('nucleo', cx, cy, true);
       st.statistiche.costruiti = 0;
+
+      if (global.Story) global.Story.init(st);
+      if (global.Tutorial) global.Tutorial.init(st);
 
       this.logga('Modulo Arca atterrato nel Settore-7. Sei l Amministratore.', 'sys');
       this.logga('Sgombera le macerie e costruisci: rottami, acqua, cibo, energia.', 'sys');
@@ -331,6 +335,7 @@
       this.state.res.dat -= t.costo;
       this.state.tech[id] = true;
       this.logga('PROGETTO COMPLETATO: ' + t.nome + ' -- ' + t.eff, 'good');
+      this.emit('tech', id);
       this.aggiorna(0);
       this.emit('mappa');
       return { ok: true };
@@ -628,6 +633,7 @@
       var r = this.rng() * tot, ev = pool[0];
       for (var i = 0; i < pool.length; i++) { r -= pool[i].peso; if (r <= 0) { ev = pool[i]; break; } }
       var L = st.livello, dettaglio = '';
+      var evId = ev.id;   /* il ramo 'raid' riassegna ev: conservo l'id */
 
       switch (ev.id) {
         case 'tempesta': {
@@ -710,7 +716,7 @@
       }
       var cls = ev.tipo === 'buono' ? 'good' : (ev.tipo === 'raid' ? 'warn' : 'bad');
       this.logga('[' + ev.nome + '] ' + ev.testo + ' ' + dettaglio, cls);
-      this.emit('evento', { nome: ev.nome, testo: ev.testo, dettaglio: dettaglio, cls: cls });
+      this.emit('evento', { id: evId, nome: ev.nome, testo: ev.testo, dettaglio: dettaglio, cls: cls });
       this.emit('mappa');
     },
 
@@ -772,7 +778,13 @@
         var raw = localStorage.getItem(SAVE_KEY);
         if (!raw) return false;
         var st = JSON.parse(raw);
-        if (!st || st.v !== 1 || !st.tiles) return false;
+        if (!st || !st.tiles || !st.v || st.v > SAVE_VER) return false;
+        /* Migrazione: i salvataggi v1 non conoscono storia e tutorial. */
+        if (st.v < SAVE_VER) {
+          if (global.Story) global.Story.init(st);
+          if (global.Tutorial) { global.Tutorial.init(st); st.tutorial.attivo = false; st.tutorial.completato = true; }
+          st.v = SAVE_VER;
+        }
         this.state = st;
         this.rng = rngFrom((st.seed ^ 0x9e3779b9) + Math.floor(st.ciclo));
         this.aggiorna(0);

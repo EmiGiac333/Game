@@ -6,6 +6,7 @@
   'use strict';
 
   var D = global.DATA, E = global.Engine, R = global.Render;
+  var ST = global.Story, TU = global.Tutorial;
   var $ = function (s) { return document.querySelector(s); };
 
   /* Passi di zoom: indice 0 = mappa tattica, 1..5 = dettaglio. */
@@ -37,6 +38,9 @@
     velocita: 1,
     selezione: null,      /* edificio selezionato */
     pannello: null,
+    mosso: false,                                  /* il giocatore ha mosso il cursore */
+    visto: { scansione: false, ricerca: false },   /* pannelli gia' aperti almeno una volta */
+    storiaAperta: null,                            /* voce espansa nel pannello STORIA */
     accumulo: 0,
     ultimoTick: 0,
 
@@ -59,10 +63,17 @@
       E.on('vittoria', function () { self.finale(true); });
       E.on('gameover', function () { self.finale(false); });
 
+      /* Narrativa: le ricerche e alcuni eventi recuperano frammenti d'archivio. */
+      E.on('tech', function (id) { self.sbloccaFrammento('tech:' + id); });
+      E.on('evento', function (ev) { if (ev && ev.id) self.sbloccaFrammento('evento:' + ev.id); });
+
+      ST.init(E.state); TU.init(E.state);
+
       this.applicaZoom();
       this.disegnaMappa();
       this.aggiornaHud();
       this.aggiornaCtx();
+      this.aggiornaTutorial();
       this.centraSuCursore();
       this.avviaCiclo();
     },
@@ -124,6 +135,7 @@
       var tx = z.modo === 'tattica' ? col : Math.floor(col / D.TILE_W);
       var ty = z.modo === 'tattica' ? row : Math.floor(row / D.TILE_H);
       if (!E.inMappa(tx, ty)) return;
+      this.mosso = true;   /* qualunque tocco sulla mappa conta come interazione */
       var stessaCella = (R.cursore.x === tx && R.cursore.y === ty);
       R.cursore.x = tx; R.cursore.y = ty;
       /* secondo tap sulla stessa cella = conferma (costruisci / scansiona) */
@@ -134,8 +146,10 @@
     dopoSpostamento: function () {
       var b = E.edificioSu(R.cursore.x, R.cursore.y);
       this.selezione = b;
+      this.mosso = true;
       this.disegnaMappa();
       this.aggiornaCtx();
+      this.verificaTutorial();
     },
 
     confermaCella: function () {
@@ -143,7 +157,8 @@
       var b = E.edificioSu(R.cursore.x, R.cursore.y);
       if (b) { this.selezione = b; this.apri('scansione'); return; }
       var t = E.tile(R.cursore.x, R.cursore.y);
-      if (t && t.t === 'rubble' && !t.cl) this.azione('sgombera');
+      if (t && t.t === 'rubble' && !t.cl) { this.azione('sgombera'); return; }
+      this.verificaTutorial();
     },
 
     /* =========================================================
@@ -223,11 +238,32 @@
           if (this.pannello === 'scansione') this.apri('scansione');
           break;
 
+        case 'tut-riprendi':
+          TU.riprendi(E.state); this.chiudi(); this.aggiornaTutorial();
+          this.toast('Tutorial riavviato dal primo passo.', 'good');
+          break;
+        case 'tut-continua':
+          TU.riprendi(E.state); this.chiudi(); this.aggiornaTutorial();
+          this.toast('Tutorial ripreso.', 'good');
+          break;
+        case 'tut-salta':
+          TU.salta(E.state); this.aggiornaTutorial();
+          this.toast('Tutorial nascosto. Lo ritrovi nel MENU.', 'sys');
+          break;
+        case 'tut-chiudi':
+          TU.chiudi(E.state); this.aggiornaTutorial();
+          break;
+        case 'storia-voce':
+          this.storiaAperta = (this.storiaAperta === arg) ? null : arg;
+          this.apri('storia');
+          break;
+
         case 'salva':
           this.toast(E.salva() ? 'Partita salvata.' : 'Salvataggio non riuscito.', E.salva() ? 'good' : 'bad');
           break;
         case 'carica':
           if (E.carica()) { this.selezione = null; R.tipoDaCostruire = null; this.chiudi();
+            ST.init(E.state); TU.init(E.state); this.aggiornaTutorial();
             this.disegnaMappa(); this.aggiornaHud(); this.aggiornaCtx(); this.toast('Partita caricata.', 'good'); }
           else this.toast('Nessun salvataggio trovato.', 'bad');
           break;
@@ -236,12 +272,16 @@
           this._confNuova = false;
           E.cancellaSalvataggio(); E.nuovaPartita();
           this.selezione = null; R.tipoDaCostruire = null; this.chiudi();
+          this.mosso = false; this.visto = { scansione: false, ricerca: false }; this.storiaAperta = null;
+          document.querySelectorAll('#toasts .overlay').forEach(function (o) { o.remove(); });
+          this.aggiornaTutorial();
           R.cursore.x = Math.floor(E.MAP_W / 2); R.cursore.y = Math.floor(E.MAP_H / 2);
           this.disegnaMappa(); this.aggiornaHud(); this.aggiornaCtx(); this.centraSuCursore();
           break;
       }
       if (az !== 'demolisci') this._confDem = false;
       if (az !== 'nuova') this._confNuova = false;
+      if (az.indexOf('tut-') !== 0) this.verificaTutorial();
     },
 
     /* =========================================================
@@ -308,6 +348,10 @@
         '<span class="st"><b>MOR</b> ' + R.barra(st.morale / 100, 6) + '</span>' +
         '<span class="st ' + (st.ctm > 50 ? 'allarme' : '') + '"><b>CTM</b> ' + R.barra(st.ctm / 100, 6) + '</span>' +
         '<span class="st"><b>DIF</b> ' + st.difesa + '</span>';
+
+      /* asterisco sulla tab STORIA quando ci sono voci non ancora lette */
+      var tabStoria = document.querySelector('#tabs [data-arg="storia"]');
+      if (tabStoria) tabStoria.classList.toggle('nuovo', ST.daLeggere(st) > 0);
     },
 
     /* Barra contestuale sotto la mappa. */
@@ -350,19 +394,70 @@
     },
 
     /* =========================================================
+       TUTORIAL
+       ========================================================= */
+
+    /* Valuta l'obiettivo corrente e avanza se raggiunto. */
+    verificaTutorial: function () {
+      if (!TU.attivo(E.state)) { this.aggiornaTutorial(); return; }
+      var fatto = TU.controlla(E.state, E, this);
+      if (fatto) {
+        this.toast('OBIETTIVO COMPLETATO: ' + fatto.azione, 'good');
+        /* un passo puo' sbloccarne subito un altro gia' soddisfatto */
+        while (TU.controlla(E.state, E, this)) { /* avanza */ }
+      }
+      this.aggiornaTutorial();
+    },
+
+    aggiornaTutorial: function () {
+      var el = $('#tut');
+      if (!el) return;
+      if (!TU.attivo(E.state)) { el.className = ''; el.innerHTML = ''; return; }
+      var t = TU.stato(E.state), p = TU.passoCorrente(E.state);
+      if (!p) { el.className = ''; el.innerHTML = ''; return; }
+      var ultimo = TU.ultimo(E.state);
+      el.className = 'aperto';
+      el.innerHTML =
+        '<div class="tut-h"><b>TUTORIAL ' + (t.passo + 1) + '/' + TU.PASSI.length + '</b> ' +
+        '<span class="tut-t">' + esc(p.titolo) + '</span>' +
+        '<span class="btn mini" data-az="' + (ultimo ? 'tut-chiudi' : 'tut-salta') + '">' +
+        (ultimo ? '[FINE]' : '[SALTA]') + '</span></div>' +
+        '<div class="tut-o">&gt; ' + esc(p.azione) + '</div>' +
+        '<div class="tut-b"><span class="btn mini" data-az="pannello" data-arg="manuale">DETTAGLI</span>' +
+        (p.suggerimento ? '<span class="tut-s">' + esc(p.suggerimento) + '</span>' : '') + '</div>';
+    },
+
+    /* =========================================================
+       NARRATIVA
+       ========================================================= */
+    sbloccaFrammento: function (fonte) {
+      var fr = ST.sbloccaFrammento(E.state, fonte);
+      if (!fr) return;
+      E.logga('Frammento d archivio recuperato: ' + fr.titolo, 'good');
+      this.toast('ARCHIVIO: ' + fr.titolo + ' -- leggilo in STORIA', 'good');
+      this.aggiornaHud();
+    },
+
+    /* =========================================================
        PANNELLI
        ========================================================= */
     apri: function (nome) {
       this.pannello = nome;
+      if (nome === 'scansione') this.visto.scansione = true;
+      if (nome === 'ricerca') this.visto.ricerca = true;
+      if (nome === 'storia') ST.segnaTuttoLetto(E.state);
       var corpo = '';
       if (nome === 'costruisci') corpo = this.pCostruisci();
       else if (nome === 'scansione') corpo = this.pScansione();
       else if (nome === 'ricerca') corpo = this.pRicerca();
       else if (nome === 'citta') corpo = this.pCitta();
       else if (nome === 'diario') corpo = this.pDiario();
+      else if (nome === 'storia') corpo = this.pStoria();
+      else if (nome === 'manuale') corpo = this.pManuale();
       else if (nome === 'menu') corpo = this.pMenu();
       $('#panel').innerHTML = corpo;
       $('#panel').classList.add('aperto');
+      this.verificaTutorial();
       document.querySelectorAll('#tabs .btn').forEach(function (b) {
         b.classList.toggle('attivo', b.getAttribute('data-arg') === nome);
       });
@@ -605,28 +700,163 @@
       return h;
     },
 
+    /* ---------- STORIA ---------- */
+    pStoria: function () {
+      var st = E.state, sto = ST.init(st), self = this;
+      var h = this.testata('ARCHIVIO',
+        sto.capitoli.length + '/' + ST.CAPITOLI.length + ' CAP -- ' +
+        sto.frammenti.length + '/' + ST.FRAMMENTI.length + ' FRAM');
+      h += '<div class="scroll">';
+      h += '<p class="dim">Registro dell Amministratore: una voce a ogni promozione del settore. I frammenti si recuperano completando ricerche e attraversando certi eventi.</p>';
+
+      h += '<div class="cat">-- REGISTRO DELL AMMINISTRATORE --</div>';
+      ST.CAPITOLI.forEach(function (c) {
+        var aperto = sto.capitoli.indexOf(c.lvl) >= 0;
+        var chiave = 'c' + c.lvl;
+        var espanso = self.storiaAperta === chiave;
+        if (!aperto) {
+          h += '<div class="voce bloccata"><div class="v-a"><b>LIV.' + c.lvl + ' -- ???</b></div>' +
+               '<div class="v-c dim">VOCE NON ANCORA REGISTRATA</div></div>';
+          return;
+        }
+        h += '<div class="voce ' + (espanso ? 'fatta' : '') + '" data-az="storia-voce" data-arg="' + chiave + '">' +
+             '<div class="v-a"><b>[LOG ' + c.num + '] ' + esc(c.titolo) + '</b></div>' +
+             '<div class="v-c dim">LIVELLO ' + c.lvl + ' -- ' + (espanso ? 'tocca per chiudere' : 'tocca per leggere') + '</div>' +
+             '</div>';
+        if (espanso) h += '<pre class="racconto">' + esc(c.testo) + '</pre>';
+      });
+
+      h += '<div class="cat">-- FRAMMENTI D ARCHIVIO --</div>';
+      ST.FRAMMENTI.forEach(function (f) {
+        var aperto = ST.sbloccato(st, f);
+        var espanso = self.storiaAperta === f.id;
+        if (!aperto) {
+          h += '<div class="voce bloccata"><div class="v-a"><b>??? -- FRAMMENTO NON RECUPERATO</b></div>' +
+               '<div class="v-c dim">' + (f.fonte.indexOf('tech:') === 0 ? 'si recupera completando una ricerca' : 'si recupera vivendo un evento') + '</div></div>';
+          return;
+        }
+        h += '<div class="voce ' + (espanso ? 'fatta' : '') + '" data-az="storia-voce" data-arg="' + f.id + '">' +
+             '<div class="v-a"><b>' + esc(f.titolo) + '</b></div>' +
+             '<div class="v-c dim">' + (espanso ? 'tocca per chiudere' : 'tocca per leggere') + '</div></div>';
+        if (espanso) h += '<pre class="racconto">' + esc(f.testo) + '</pre>';
+      });
+
+      if (st.vittoria || st.gameover) {
+        h += '<div class="cat">-- EPILOGO --</div>';
+        h += '<pre class="racconto">' + esc(st.vittoria ? ST.FINALI.vittoria : ST.FINALI.sconfitta) + '</pre>';
+      }
+      h += '</div>';
+      return h;
+    },
+
+    /* ---------- MANUALE ---------- */
+    pManuale: function () {
+      var h = this.testata('MANUALE DELL AMMINISTRATORE', 'SEMPRE DISPONIBILE NEL MENU');
+      h += '<div class="scroll aiuto">';
+
+      h += '<div class="cat">-- 1. OBIETTIVO --</div>' +
+        '<p>Portare il Settore-7 da avamposto a <b>NEXUS PRIME</b> (livello 10), completare la ricerca <b>PROTOCOLLO ESODO</b>, costruire lo <b>SPAZIOPORTO ESODO</b> e avviare il lancio. Il conto alla rovescia dura 60 cicli: vanno difesi.</p>' +
+        '<p>Si perde in un modo solo: restare senza coloni.</p>';
+
+      h += '<div class="cat">-- 2. COMANDI --</div>' +
+        '<p><b>Spostarsi:</b> trascina la mappa con un dito.<br>' +
+        '<b>Selezionare:</b> tocca una cella.<br>' +
+        '<b>Confermare:</b> tocca <i>di nuovo</i> la stessa cella (scansiona un edificio, conferma una costruzione, sgombera macerie).<br>' +
+        '<b>Zoom:</b> i tasti [-] e [+] in basso a destra. Sotto il minimo si passa alla <b>mappa tattica</b>, che mostra tutto il settore in un colpo d occhio con un carattere per cella.<br>' +
+        '<b>Velocita:</b> il tasto in alto a destra cicla fra pausa, x1, x2 e x4.</p>' +
+        '<p class="dim">Con una tastiera collegata: frecce per il cursore, Invio conferma, Esc annulla, + e - per lo zoom.</p>';
+
+      h += '<div class="cat">-- 3. RISORSE --</div>' +
+        '<p><b>RTM rottami</b> -- materiale base di ogni costruzione.<br>' +
+        '<b>H2O acqua</b> -- consumata dai coloni a ogni ciclo.<br>' +
+        '<b>BIO biomassa</b> -- il cibo, consumato dai coloni.<br>' +
+        '<b>LEG leghe</b> -- raffinate dalla fonderia, servono alle strutture avanzate.<br>' +
+        '<b>DAT dati</b> -- alimentano la ricerca.</p>' +
+        '<p>Ogni risorsa ha un <b>tetto di stoccaggio</b>: quello che produci oltre il tetto va perso. Il tetto cresce con il livello della citta e con i DEPOSITI CORAZZATI. I progetti di fine partita costano molto: senza depositi rischi di non arrivarci mai.</p>';
+
+      h += '<div class="cat">-- 4. ENERGIA --</div>' +
+        '<p>L energia <b>non si accumula</b>. E un bilancio istantaneo fra produzione e richiesta, mostrato come NRG nella barra in alto.</p>' +
+        '<p>Se la richiesta supera la produzione, <b>tutte</b> le strutture consumatrici rendono in proporzione: al 50% di copertura, meta resa ovunque. Tieni sempre un margine, e ricorda che le torrette senza corrente non sparano.</p>';
+
+      h += '<div class="cat">-- 5. COLONI E ADDETTI --</div>' +
+        '<p>Il <b>65%</b> dei coloni costituisce la forza lavoro. La barra in alto mostra <b>LAV posti/forza</b>: se i posti di lavoro superano la forza disponibile, la resa cala ovunque in proporzione.</p>' +
+        '<p>I coloni crescono da soli se ci sono alloggi liberi, saldo positivo di acqua e cibo e morale almeno 45. La crescita e proporzionale alla popolazione: piu la citta e grande, piu accelera.</p>' +
+        '<p>Il <b>morale</b> sale con cibo e acqua in eccesso, monumenti, centri medici e mercati; scende con carenze, blackout, sovraffollamento e contaminazione. Il morale moltiplica la resa di tutto (da x0,70 a x1,00).</p>';
+
+      h += '<div class="cat">-- 6. TERRENO E ADIACENZE --</div>' +
+        '<p>Le <b>macerie</b> vanno sgomberate prima di costruire, e danno rottami. <b>Speroni</b> e <b>pozze tossiche</b> non sono edificabili, ma le pozze servono: il POZZO PROFONDO va costruito adiacente a una.</p>' +
+        '<p>Bonus di posizione:<br>' +
+        '-- <b>TRACCIATO</b> adiacente: +15% a qualsiasi struttura;<br>' +
+        '-- <b>RACCOGLITORE</b> vicino alle macerie: fino a +90%;<br>' +
+        '-- <b>SERRA IDROPONICA</b> vicino a condensatore (+15%) o pozzo (+20%).</p>' +
+        '<p>Il pannello SCANSIONE elenca sempre i bonus attivi su quella struttura.</p>';
+
+      h += '<div class="cat">-- 7. POTENZIAMENTI --</div>' +
+        '<p>Ogni struttura sale fino a <b>MK-5</b>: +40% di resa per livello, fino a x2,6, sullo stesso spazio. Salgono anche alloggi, difesa e capienza dei depositi. Il costo cresce del 75% a ogni grado.</p>' +
+        '<p>Quando il terreno finisce, potenziare e l unico modo di crescere: e la strategia prevista per gli ultimi livelli.</p>';
+
+      h += '<div class="cat">-- 8. DIFESA E INCURSIONI --</div>' +
+        '<p>I predoni attaccano ogni 60-130 cicli e la loro forza cresce con il livello della citta (circa 10 + 14 per livello). Il pannello CITTA mostra la stima del prossimo raid accanto alla tua difesa.</p>' +
+        '<p>Se la difesa regge, il raid viene respinto e recuperi bottino. Se non regge, perdi rottami, strutture danneggiate e coloni. Torrette, barriere e il progetto RETE DI PUNTAMENTO (+60%) sono la risposta.</p>';
+
+      h += '<div class="cat">-- 9. CONTAMINAZIONE --</div>' +
+        '<p>Fonderie, reattori, officine e raccoglitori emettono contaminazione; TORRI DI FILTRAGGIO e RIGENERATORI ATMOSFERICI la assorbono. Oltre il <b>55%</b> i coloni cominciano a morire, e il morale scende comunque in proporzione.</p>';
+
+      h += '<div class="cat">-- 10. RICERCA --</div>' +
+        '<p>Dieci progetti in albero: alcuni richiedono un progetto precedente, tutti richiedono un livello citta minimo. Sbloccano bonus permanenti e tre strutture chiave (reattore, arcologia, spazioporto).</p>' +
+        '<p>Ogni progetto completato recupera anche un <b>frammento d archivio</b>: la storia del Settore-7 si legge nel pannello STORIA.</p>';
+
+      h += '<div class="cat">-- 11. STRATEGIA D APERTURA --</div>' +
+        '<p>Un ordine che funziona:</p>' +
+        '<p>1. Sgombera due o tre celle di macerie vicine al Nucleo.<br>' +
+        '2. Un RACCOGLITORE adiacente alle macerie rimaste.<br>' +
+        '3. Un ARRAY FOTOVOLTAICO (non richiede addetti).<br>' +
+        '4. Un CONDENSATORE e una MICO-FARM: acqua e cibo in positivo.<br>' +
+        '5. Due RIFUGI: piu coloni, quindi piu addetti.<br>' +
+        '6. Tracciati fra le strutture per il +15%.<br>' +
+        '7. Un RELE DATI appena la rete regge: senza dati non c e ricerca.</p>' +
+        '<p class="dim">Regola generale: risolvi sempre per primo il vincolo peggiore. Se NRG e rosso costruisci energia, se LAV e in deficit costruisci alloggi, se H2O o BIO sono negativi costruisci acqua o cibo. Tutto il resto puo aspettare.</p>';
+
+      h += '<div class="cat">-- 12. SALVATAGGIO --</div>' +
+        '<p>La partita si salva da sola ogni 15 cicli, quando esci e quando metti l app in secondo piano. Il salvataggio resta su questo dispositivo. Dal MENU puoi salvare e caricare a mano.</p>';
+
+      h += '</div>';
+      return h;
+    },
+
     /* ---------- MENU ---------- */
     pMenu: function () {
+      var st = E.state, t = TU.stato(st), sto = ST.init(st);
       var h = this.testata('TERMINALE AMMINISTRATORE');
       h += '<div class="scroll">';
+
+      h += '<div class="cat">-- GUIDA --</div>';
+      h += '<div class="azioni">' +
+        '<span class="btn ok" data-az="pannello" data-arg="manuale">MANUALE COMPLETO<u>12 sezioni, sempre qui</u></span>' +
+        (TU.attivo(st)
+          ? '<span class="btn" data-az="tut-salta">NASCONDI TUTORIAL<u>passo ' + (t.passo + 1) + '/' + TU.PASSI.length + '</u></span>'
+          : (t.completato
+              ? '<span class="btn" data-az="tut-riprendi">RIFAI IL TUTORIAL<u>completato</u></span>'
+              : '<span class="btn ok" data-az="tut-continua">RIPRENDI TUTORIAL<u>passo ' + (t.passo + 1) + '/' + TU.PASSI.length + '</u></span>')) +
+        '<span class="btn" data-az="pannello" data-arg="storia">ARCHIVIO E STORIA<u>' +
+          sto.capitoli.length + '/' + ST.CAPITOLI.length + ' capitoli, ' +
+          sto.frammenti.length + '/' + ST.FRAMMENTI.length + ' frammenti</u></span>' +
+        '</div>';
+
+      h += '<div class="cat">-- PARTITA --</div>';
       h += '<div class="azioni">' +
         '<span class="btn ok" data-az="salva">SALVA PARTITA</span>' +
         '<span class="btn" data-az="carica">CARICA PARTITA</span>' +
         '<span class="btn no" data-az="nuova">NUOVA PARTITA</span>' +
         '</div>';
-      h += '<div class="cat">-- COME SI GIOCA --</div><div class="aiuto">' +
-        '<p><b>OBIETTIVO.</b> Far crescere il Settore-7 da avamposto a NEXUS PRIME (livello 10), poi costruire lo SPAZIOPORTO ESODO e avviare il lancio.</p>' +
-        '<p><b>MAPPA.</b> Trascina per spostarti. Tocca una cella per selezionarla, toccala di nuovo per confermare (scansione o costruzione). Usa [-] e [+] per lo zoom: al minimo passi alla MAPPA TATTICA.</p>' +
-        '<p><b>MACERIE.</b> Le celle di macerie non sono edificabili: sgomberale prima, ottieni rottami in cambio.</p>' +
-        '<p><b>ENERGIA.</b> Non si accumula: se la richiesta supera la produzione, tutte le strutture rendono meno. Tieni sempre un margine.</p>' +
-        '<p><b>ADDETTI.</b> Il 65% dei coloni lavora. Se i posti superano la forza lavoro, la resa cala ovunque: costruisci alloggi.</p>' +
-        '<p><b>ACQUA E CIBO.</b> Ogni colono consuma H2O e BIO ogni ciclo. In carenza il morale crolla e la gente muore.</p>' +
-        '<p><b>ADIACENZE.</b> Un TRACCIATO accanto a una struttura da +15%. I raccoglitori rendono di piu vicino alle macerie, il pozzo va costruito accanto a una pozza tossica, le serre vicino all acqua.</p>' +
-        '<p><b>POTENZIAMENTI.</b> Ogni struttura sale fino a MK-5: piu resa, piu alloggi, piu difesa. Nel tardo gioco conviene potenziare invece di espandersi.</p>' +
-        '<p><b>DIFESA.</b> I predoni attaccano periodicamente e diventano piu forti a ogni livello. Se la difesa e sotto la loro forza, perdi risorse, strutture e coloni.</p>' +
-        '<p><b>CONTAMINAZIONE.</b> Fonderie e reattori inquinano. Filtri e rigeneratori ripuliscono. Oltre il 55% i coloni iniziano a morire.</p>' +
-        '<p class="dim">Il salvataggio e automatico ogni 15 cicli e alla chiusura.</p>' +
+
+      h += '<div class="cat">-- IN BREVE --</div><div class="aiuto">' +
+        '<p><b>Tocca due volte</b> la stessa cella per confermare: scansiona un edificio, conferma una costruzione, sgombera macerie.</p>' +
+        '<p><b>Risolvi sempre il vincolo peggiore.</b> NRG rosso: costruisci energia. LAV in deficit: costruisci alloggi. H2O o BIO negativi: costruisci acqua o cibo.</p>' +
+        '<p><b>Quando lo spazio finisce</b>, potenzia invece di espanderti: MK-5 vale 2,6 volte MK-1.</p>' +
+        '<p class="dim">Tutto il resto e nel MANUALE COMPLETO qui sopra. Salvataggio automatico ogni 15 cicli.</p>' +
         '</div>';
+
       h += '</div>';
       return h;
     },
@@ -635,10 +865,15 @@
        NOTIFICHE
        ========================================================= */
     toast: function (testo, cls) {
+      var cont = $('#toasts');
+      /* Tetto di notifiche visibili: una raffica (obiettivi, evento, promozione)
+         non deve coprire lo schermo. Le piu' vecchie escono per prime. */
+      var vecchi = cont.querySelectorAll('.toast');
+      for (var i = 0; i <= vecchi.length - 3; i++) vecchi[i].remove();
       var t = document.createElement('div');
       t.className = 'toast ' + (cls || 'sys');
       t.textContent = testo;
-      $('#toasts').appendChild(t);
+      cont.appendChild(t);
       setTimeout(function () { t.classList.add('via'); }, 3200);
       setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3800);
     },
@@ -653,7 +888,18 @@
         '|   perimetro esteso -- nuove strutture     |',
         '+==========================================+'
       ].join('\n');
-      this.overlay(testo, 'good');
+      /* La promozione sblocca il capitolo del registro dell'Amministratore. */
+      var cap = ST.sbloccaCapitolo(E.state, l.lvl);
+      if (cap) {
+        testo += '\n\n   NUOVA VOCE NEL REGISTRO:\n   [LOG ' + cap.num + '] ' + cap.titolo;
+        E.logga('Nuova voce nel registro: [LOG ' + cap.num + '] ' + cap.titolo, 'good');
+        this.overlay(testo, 'good',
+          '<span class="btn ok" data-az="pannello" data-arg="storia">LEGGI</span>' +
+          '<span class="btn">CHIUDI</span>');
+      } else {
+        this.overlay(testo, 'good');
+      }
+      this.aggiornaHud();
     },
 
     finale: function (vinto) {
@@ -687,19 +933,22 @@
         '',
         '        F I N E   P A R T I T A'
       ].join('\n');
-      this.overlay(testo, vinto ? 'good' : 'bad', true);
+      this.overlay(testo, vinto ? 'good' : 'bad',
+        '<span class="btn ok" data-az="pannello" data-arg="storia">LEGGI L EPILOGO</span>' +
+        '<span class="btn no" data-az="nuova">NUOVA PARTITA</span>');
     },
 
-    overlay: function (testo, cls, permanente) {
+    /* bottoni: HTML dei pulsanti; se presenti l'overlay non si chiude da solo */
+    overlay: function (testo, cls, bottoni) {
       var o = document.createElement('div');
       o.className = 'overlay ' + cls;
       o.innerHTML = '<pre>' + esc(testo) + '</pre>' +
-        (permanente ? '<div class="azioni"><span class="btn ok" data-az="nuova">NUOVA PARTITA</span></div>' : '');
+        (bottoni ? '<div class="azioni">' + bottoni + '</div>' : '');
       $('#toasts').appendChild(o);
       o.addEventListener('click', function (e) {
         if (!e.target.closest('[data-az]')) o.remove();
       });
-      if (!permanente) setTimeout(function () { if (o.parentNode) o.remove(); }, 4200);
+      if (!bottoni) setTimeout(function () { if (o.parentNode) o.remove(); }, 4200);
     },
 
     /* =========================================================
@@ -723,6 +972,7 @@
           if (self.pannello === 'citta' || self.pannello === 'scansione') self.apri(self.pannello);
           else self.aggiornaCtx();
           if (Math.floor(E.state.ciclo) % 15 === 0) E.salva();
+          self.verificaTutorial();
           self.disegnaMappa();
         }
       }, 250);
