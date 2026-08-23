@@ -31,7 +31,8 @@ EDIFICI = {
     'idroponica': (2, 1, G.idroponica),    'fonderia': (2, 1, G.fonderia),
     'pozzo': (2, 1, G.pozzo),              'laboratorio': (2, 1, G.laboratorio),
     'officina': (2, 1, G.officina),        'mercato': (2, 1, G.mercato),
-    'medico': (2, 1, G.medico),            'nucleo': (2, 2, G.nucleo),
+    'medico': (2, 1, G.medico),            'centro': (2, 1, G.centro),
+    'nucleo': (2, 2, G.nucleo),
     'reattore': (2, 2, G.reattore),        'arcologia': (2, 2, G.arcologia),
     'rigeneratore': (2, 2, G.rigeneratore), 'spazioporto': (3, 2, G.spazioporto),
 }

@@ -29,6 +29,9 @@ body{
 #hud-top .liv{color:var(--core);font-weight:bold}
 #hud-top .nomeliv{color:var(--forte);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #hud-top .cantiere{margin-left:auto;color:var(--ambra);white-space:nowrap}
+#hud-top .allarme-batt{margin-left:auto;color:#0b0d0a;background:var(--rosso);white-space:nowrap;
+  padding:1px 6px;border-radius:2px;font-weight:bold;cursor:pointer;animation:pulsa 1.1s infinite}
+@keyframes pulsa{0%,100%{opacity:1}50%{opacity:.45}}
 #hud-top .ciclo{margin-left:auto}
 #hud-res{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
 #hud-res::-webkit-scrollbar{display:none}
@@ -156,6 +159,8 @@ body{
 .tab .r>span:first-child{color:var(--dim)}
 .tab .r>span:last-child{color:var(--txt);text-align:right;white-space:nowrap}
 .azioni{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 4px}
+.scelte{display:flex;gap:4px;margin:4px 0}
+.scelte .btn{flex:1 1 0;padding:7px 4px;font-size:10px}
 .azioni .btn{flex:1 1 44%;padding:9px 6px}
 .aiuto p{font-size:11px;margin:6px 0;line-height:1.55}
 .aiuto i{font-style:italic;color:var(--forte)}

@@ -91,7 +91,7 @@ manca. Un asterisco sulla tab STORIA segnala che c'è qualcosa di nuovo da legge
 | Confermare (scansiona / costruisci / sgombera) | tocca **di nuovo** la stessa cella |
 | Zoom | `[-]` `[+]` in basso a destra — al minimo la **vista tattica** adatta tutto il settore allo schermo |
 | Velocità | il pulsante `x1` in alto a destra cicla `|| → x1 → x2 → x4` |
-| Pannelli | barra in basso: COSTRUISCI, SCANSIONE, RICERCA, CITTÀ, STORIA, DIARIO, MENU |
+| Pannelli | barra in basso: COSTRUISCI, SPEDIZIONI, RICERCA, CITTÀ, STORIA, DIARIO, MENU |
 
 Con tastiera collegata: frecce per il cursore, `Invio` conferma, `Esc` annulla, `+`/`-` zoom.
 
@@ -126,8 +126,9 @@ tossica, le serre guadagnano vicino alle fonti d'acqua.
 **Potenziamenti.** Ogni struttura sale fino a **MK-5**: ×2,6 su resa, alloggi e difesa,
 ma mai oltre il grado del Nucleo. Quando spazio e limiti finiscono, si cresce in verticale.
 
-**Difesa e incursioni.** I predoni attaccano periodicamente e diventano più forti a ogni
-livello. Se la difesa è sotto la loro forza perdi risorse, strutture e coloni.
+**Scontri.** I predoni attaccano periodicamente e diventano più forti a ogni grado del
+Nucleo. L'attacco viene avvistato in anticipo e la risposta la scegli tu fra cinque
+tattiche, ognuna con la sua probabilità — vedi *Scontri tattici*.
 
 **Eventi.** Dieci eventi casuali: tempeste di ruggine, piogge acide, blackout, epidemie,
 incursioni, ma anche profughi, relitti orbitali, archivi intatti, carovane e falde acquifere.
@@ -165,14 +166,61 @@ i predoni in arrivo è un modo rapido per perdere una città.
 
 Il pannello **CITTÀ** mostra sempre costo, durata e cosa sblocca il grado successivo.
 
-**25 strutture** su 8 categorie e **10 progetti di ricerca** in albero tecnologico
-(dal Fotovoltaico Spettrale al Protocollo Esodo).
+**26 strutture** su 8 categorie e **10 progetti di ricerca** in albero tecnologico
+(dal Fotovoltaico Spettrale al Protocollo Esodo). Il pannello **SCANSIONE** di una struttura
+si apre toccandola due volte sulla mappa.
 
 **Vittoria:** porta il Nucleo a **MK-10**, ricerca PROTOCOLLO ESODO, costruisci lo
 SPAZIOPORTO ESODO, apri la sua SCANSIONE e avvia il lancio. Sessanta cicli di conto
 alla rovescia — e difendilo.
 
 **Sconfitta:** restare senza coloni. Anche questo ha il suo epilogo.
+
+---
+
+## Ricognizioni
+
+Con un **CENTRO SPEDIZIONI** attivo (Nucleo MK-3) puoi mandare squadre oltre il perimetro.
+Ogni due gradi del centro tieni in viaggio una squadra in più.
+
+Scegli un **territorio** fra i dieci generati a inizio partita — rovine urbane, depositi
+militari, archivi sepolti, relitti orbitali, accampamenti predoni, la frontiera dello
+sciame — e un **equipaggiamento**:
+
+| | Coloni | Effetto |
+|---|---|---|
+| **LEGGERO** | 2 | rapido ed economico, ma senza margine se va storto |
+| **STANDARD** | 4 | il compromesso ragionevole |
+| **PESANTE** | 7 | lento e costoso, ma torna quasi sempre e carico |
+
+I coloni partono davvero: tornano solo se le cose vanno bene. Il pannello mostra la
+probabilità di riuscita **prima** di partire, calcolata su pericolo del territorio,
+equipaggiamento, grado del centro e informazioni già raccolte.
+
+Riportano risorse, coloni, frammenti d'archivio e soprattutto **INTEL**. Le informazioni
+sbloccano l'imboscata e migliorano ogni ricognizione successiva; colpire un accampamento
+predoni li tiene lontani per centinaia di cicli. Oltre 12 INTEL le informazioni invecchiano
+e non servono più: vanno spese.
+
+---
+
+## Scontri tattici
+
+Gli attacchi non si risolvono più confrontando due numeri. Vengono prima **avvistati** —
+30 cicli per costruire torrette, riparare, prepararsi — e all'impatto il gioco chiede
+**come rispondere**, mostrando la probabilità di ogni tattica:
+
+| Tattica | Fa leva su | Note |
+|---|---|---|
+| **DIFESA STATICA** | difese | nessun rischio in più, nessun guadagno |
+| **SORTITA** | coloni e morale | serve popolazione ≥ 25: vinci molto, perdi molto |
+| **IMBOSCATA** | informazioni | serve INTEL: la migliore, se hai esplorato |
+| **TRATTATIVA** | scorte | paghi il pedaggio, nessun morto, morale −9 |
+| **RITIRATA ORDINATA** | niente | perdi magazzini, salvi tutte le persone |
+
+Se non decidi entro 20 cicli il settore si difende come può, in statica — il gioco non si
+blocca ad aspettarti. Dal MK-8 possono arrivare gli **sciami**: più forti, e con loro non
+si tratta.
 
 ---
 
@@ -202,10 +250,10 @@ npm test           # tutto
 
 | Comando | Cosa verifica |
 |---|---|
-| `npm run verifica` | ~550 invarianti: limiti coerenti con gli sblocchi, dimensioni esatte dei PNG, **sostenibilità di ogni grado** (energia, manodopera, contaminazione), costi del Nucleo entro i tetti di magazzino, albero di ricerca, storia, ordine dei passi del tutorial |
+| `npm run verifica` | ~570 invarianti: limiti coerenti con gli sblocchi, dimensioni esatte dei PNG, **sostenibilità di ogni grado** (energia, manodopera, contaminazione), costi del Nucleo entro i tetti di magazzino, albero di ricerca, storia, ordine dei passi del tutorial |
 | `npm run verifica-sprite` | rigenera l'arte da `tools/` e la confronta **pixel per pixel** con quella committata |
 | `npm run simula` | gioca 5 partite intere headless e pretende che ognuna arrivi alla vittoria |
-| `npm run browser` | 44 prove end-to-end in Chromium a viewport da telefono: caricamento sprite, disegno della plancia, tocco, zoom, percorso completo del tutorial, sblocchi narrativi, pannelli, salvataggi e migrazione dai formati precedenti |
+| `npm run browser` | 61 prove end-to-end in Chromium a viewport da telefono: caricamento sprite, disegno della plancia, tocco, zoom, percorso completo del tutorial, sblocchi narrativi, pannelli, salvataggi e migrazione dai formati precedenti |
 
 Due workflow GitHub Actions:
 
@@ -229,7 +277,9 @@ index.html              shell dell'app
 css/style.css           tema terminale CRT, layout mobile-first
 js/data.js              risorse, terreni, 25 edifici, tecnologie, livelli, eventi
 js/sprites.js           caricamento sprite e cache per livello di zoom
-js/story.js             10 capitoli, 14 frammenti d'archivio, 2 epiloghi
+js/story.js             10 capitoli, 17 frammenti d'archivio, 2 epiloghi
+js/spedizioni.js        territori, equipaggiamenti, viaggi ed esiti delle ricognizioni
+js/battaglia.js         avvistamento, tattiche e risoluzione degli scontri
 js/tutorial.js          14 passi guidati con obiettivi verificati sullo stato di gioco
 js/engine.js            stato, generazione mappa, simulazione economica, eventi, salvataggio
 js/render.js            renderer su canvas: terreno, perimetro, strutture, cursore

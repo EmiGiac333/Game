@@ -239,3 +239,30 @@ def spazioporto(c):
     for i in range(3): c.rect(6 + i * 4, 30, 3, 4, DAT[3])
     c.retino(40, 50, 16, 12, ENER[3], 2, 90)                 # bagliore alla base
     c.retino(38, 56, 20, 6, RED[2], 3, 70)
+
+
+def centro(c):
+    """Centro spedizioni: rimessa aperta, mezzo pronto, sala mappe."""
+    c.ombra(2, 25, 60, 6)
+    c.rect(2, 24, 60, 6, METAL[0])
+    c.blocco(4, 11, 34, 15, RUST, tetto=4)                   # rimessa
+    c.rect(8, 15, 26, 11, DARK)                              # portellone aperto
+    c.rect(9, 16, 24, 9, NIGHT)
+    c.rect(9, 11, 24, 3, ENER[2]); c.rect(9, 11, 24, 1, ENER[4])
+    # mezzo cingolato pronto a partire
+    c.rect(12, 18, 18, 6, METAL[2]); c.hline(12, 18, 18, METAL[3])
+    c.rect(14, 15, 8, 4, METAL[3]); c.rect(15, 16, 5, 2, WAT[3])
+    c.rect(11, 24, 20, 3, METAL[0])
+    for i in range(5): c.rect(12 + i * 4, 25, 2, 2, METAL[2])
+    c.rect(28, 16, 4, 3, ENER[3])                            # fari
+    # sala mappe con tabellone e antenna
+    c.blocco(40, 14, 20, 12, METAL, tetto=3)
+    c.rect(43, 18, 14, 7, DAT[0]); c.bordo(43, 18, 14, 7, METAL[1])
+    for i in range(4):                                        # rotte tracciate
+        c.line(44 + i * 3, 24, 46 + i * 4, 19, DAT[3])
+        c.p(46 + i * 4, 19, ENER[3])
+    c.vline(50, 6, 9, METAL[3]); c.vline(51, 6, 9, METAL[1])
+    c.line(50, 6, 46, 10, METAL[2]); c.line(51, 6, 55, 10, METAL[2])
+    c.p(50, 5, ENER[4])
+    c.rect(38, 20, 3, 6, RUST[2])                            # casse pronte
+    c.rect(37, 22, 2, 4, RUST[3])

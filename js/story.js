@@ -181,6 +181,12 @@
     { id: 'f_eso', fonte: 'tech:esodo', titolo: 'ARCA-1 / ULTIMA VOCE DI BORDO',
       testo: 'Riserva ossigeno: 4%. Riserva propellente: 0%.\nSiamo in undici. Eravamo trecento.\n\nLascio il faro in automatico sulla banda lunga. Se qualcuno la\' sotto\nsi sveglia, sentira\' una voce e non si sentira\' solo per un po\'.\n\nMi dispiace per la parola che ho scelto. Non mi e\' venuto niente di meglio.\n\n    ATTENDETE\n\n(il canale resta aperto, portante stabile, nessuna voce ulteriore)' },
 
+    { id: 'f_sped_arch', fonte: 'spedizione:archivio', titolo: 'ULTIMO ACCESSO REGISTRATO',
+      testo: 'Terminale di consultazione, sala 2. Ultima sessione utente:\n\n  03:52  ricerca: "quanto dura un blackout totale"\n  03:58  ricerca: "protocollo cenere"\n  04:02  ricerca: "protocollo cenere annullamento"\n  04:09  ricerca: "come si spiega ai bambini"\n\nSessione chiusa alle 04:11:07 senza disconnessione.' },
+    { id: 'f_sped_avam', fonte: 'spedizione:avamposto', titolo: 'LAVAGNA DEL SETTORE-4',
+      testo: 'Una lavagna magnetica in una sala comando identica alla mia.\nIn alto, la stessa griglia di turni che uso io.\nIn basso, con un pennarello quasi finito:\n\n    GIORNI SENZA INCIDENTI: 4\n\nIl 4 e\' scritto sopra un numero cancellato che era molto piu\' grande.' },
+    { id: 'f_sped_sciame', fonte: 'spedizione:sciame', titolo: 'CAMPIONE 001, ANALISI SUL POSTO',
+      testo: 'Un manutentore inerte, grande come un pollice. Sotto la lente:\ndodici bracci, un pannello solare, e una targhetta stampata a rilievo\nche nessuno sciame avrebbe motivo di incidere.\n\n    RIPARARE E\' PRENDERSI CURA\n\nQualcuno ci ha messo uno slogan. Poi e\' andato a casa.' },
     { id: 'f_raid', fonte: 'evento:raid', titolo: 'GRAFFITO SUL DEPOSITO EST',
       testo: 'VOI NON SAPETE COSA AVETE RIACCESO\n\nVernice al piombo, stampatello, un metro d\'altezza.\nVera voleva cancellarlo. Ho chiesto di lasciarlo:\nun avvertimento scritto male e\' pur sempre un avvertimento.' },
     { id: 'f_arch', fonte: 'evento:archivio', titolo: 'VERBALE MUNICIPALE 44/2104',

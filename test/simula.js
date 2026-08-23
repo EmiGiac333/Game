@@ -16,8 +16,9 @@
 const path = require('path');
 const RADICE = path.join(__dirname, '..');
 global.window = global;
-['data', 'story', 'tutorial', 'engine'].forEach(m => require(path.join(RADICE, 'js', m + '.js')));
+['data', 'story', 'tutorial', 'spedizioni', 'battaglia', 'engine'].forEach(m => require(path.join(RADICE, 'js', m + '.js')));
 const E = global.Engine, D = global.DATA;
+const SPED = global.Spedizioni, BAT = global.Battaglia;
 
 const SEMI = process.argv.slice(2).length
   ? process.argv.slice(2).map(Number)
@@ -63,6 +64,7 @@ function partita(seme) {
     if (st.ctm > 12) { if (piazza('rigeneratore') || piazza('filtro')) return; }
     if (st.difesa < 20 + st.livello * 14) return piazza('torretta') || piazza('muro');
     if (st.nettoLeg < 1.5) return piazza('fonderia');
+    if (SPED.squadreMax(E) === 0 && posti('centro') && piazza('centro')) return;
     if (st.nettoDat < 2.5) return piazza('laboratorio') || piazza('antenna');
     if (prossimo && (prossimo.costo.rtm > E.cap('rtm') * 0.85 || st.res.rtm > E.cap('rtm') * 0.8)) {
       return piazza('deposito');
@@ -86,6 +88,33 @@ function partita(seme) {
     for (const b of scelte) if (E.potenzia(b).ok) return;
   }
 
+  /* Sceglie la tattica con la probabilita' migliore, e tratta se sta perdendo. */
+  function rispondiAllAttacco() {
+    const b = st.battaglia;
+    if (!b || b.fase !== 'scelta') return;
+    let migliore = null, best = -1;
+    BAT.TATTICHE.forEach(t => {
+      if (t.id === 'ritirata' || !t.disponibile(E)) return;
+      const p = t.certa ? 0.55 : BAT.probabilita(E, t);   /* trattare vale una vittoria mediocre */
+      if (p > best) { best = p; migliore = t; }
+    });
+    if (migliore) BAT.risolvi(E, migliore.id);
+  }
+
+  /* Manda in ricognizione il territorio piu' promettente fra quelli sicuri. */
+  function mandaSpedizione() {
+    if (!SPED.squadreMax(E) || st.spedizioni.length >= SPED.squadreMax(E)) return;
+    const eq = st.res.leg > 200 ? SPED.equipById('pesante') : SPED.equipById('standard');
+    let scelto = null, best = 0;
+    st.territori.forEach(t => {
+      if (!SPED.puoPartire(E, t, eq).ok) return;
+      const p = SPED.probabilita(E, t, eq);
+      const valore = p * (SPED.archeDi(t).pericolo + 1);   /* rischio ripagato */
+      if (valore > best) { best = valore; scelto = t; }
+    });
+    if (scelto) SPED.parti(E, scelto, eq);
+  }
+
   const tappe = {};
   let ultimo = 1, spazioporto = false;
 
@@ -94,13 +123,17 @@ function partita(seme) {
     if (c % 5 === 0) turno();
     if (c % 3 === 0) sgombera();
     if (c % 9 === 0 && !E.puoPotenziareNucleo().ok) potenziaQualcosa();
+    rispondiAllAttacco();
+    if (c % 11 === 0) mandaSpedizione();
     if (c % 20 === 0) D.TECHS.forEach(t => {
       if (E.techDisponibile(t) && st.res.dat >= t.costo) E.ricerca(t.id);
     });
     if (st.livello !== ultimo) { ultimo = st.livello; tappe['MK-' + st.livello] = c; }
     if (st.tech.esodo && !spazioporto && !E.contaTipo('spazioporto') && piazza('spazioporto')) spazioporto = true;
     if (spazioporto && !st.lancioAvviato) E.avviaLancio();
-    if (st.vittoria) return { esito: 'vittoria', cicli: c, pop: st.pop, tappe, tech: Object.keys(st.tech).length };
+    if (st.vittoria) return { esito: 'vittoria', cicli: c, pop: st.pop, tappe,
+                              tech: Object.keys(st.tech).length,
+                              sped: st.spedStat, batt: st.battStat, intel: st.intel };
     if (st.gameover) return { esito: 'estinzione', cicli: c, pop: 0, tappe, tech: Object.keys(st.tech).length };
   }
   return { esito: 'incompiuta', cicli: TETTO_CICLI, pop: st.pop, livello: st.livello, tappe,
@@ -116,6 +149,9 @@ SEMI.forEach(seme => {
   console.log(`  seme ${String(seme).padStart(6)}  ${buono ? 'VITTORIA ' : 'FALLITA  '}` +
               `ciclo ${String(r.cicli).padStart(5)}  coloni ${String(r.pop).padStart(4)}  ` +
               `ricerche ${r.tech}/10` + (buono ? '' : `  (${r.esito}${r.livello ? ', fermo a MK-' + r.livello : ''})`));
+  if (buono) console.log(`                   spedizioni ${r.sped.riuscite}/${r.sped.partite} riuscite, ` +
+                         `${r.sped.perduti} perduti  |  scontri ${r.batt.vinte}V ${r.batt.perse}P ` +
+                         `${r.batt.trattate}T  |  intel ${r.intel}`);
   if (!buono) console.log('    tappe: ' + JSON.stringify(r.tappe));
 });
 

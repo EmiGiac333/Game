@@ -66,7 +66,9 @@ function sezione(n) { console.log('\n== ' + n + ' =='); }
     await page.goto(BASE);
     await page.waitForFunction(() => window.Sprites && window.Sprites.pronto, { timeout: 30000 });
     ok(await page.evaluate(() => Sprites.mancanti.length) === 0, 'tutti gli sprite caricati');
-    ok(await page.evaluate(() => Object.keys(Sprites.cache).length) === 61, '61 sprite in cache');
+    const spriteAttesi = await page.evaluate(() => Sprites.elenco().length);
+    ok(await page.evaluate(() => Object.keys(Sprites.cache).length) === spriteAttesi,
+       `tutti i ${spriteAttesi} sprite dichiarati sono in cache`);
     ok(await page.evaluate(() => Sprites.ZOOM_PX.every(px => 512 % px === 0)),
        'ogni livello di zoom divide 512 per un intero');
 
@@ -199,7 +201,7 @@ function sezione(n) { console.log('\n== ' + n + ' =='); }
     }
     await page.evaluate(() => UI.apri('manuale'));
     const manuale = await page.textContent('#panel');
-    ok((manuale.match(/-- \d+\./g) || []).length === 13, 'il manuale ha tutte le 13 sezioni');
+    ok((manuale.match(/-- \d+\./g) || []).length === 14, 'il manuale ha tutte le 14 sezioni');
 
     await page.evaluate(() => UI.apri('costruisci'));
     await page.waitForTimeout(120);
@@ -212,6 +214,98 @@ function sezione(n) { console.log('\n== ' + n + ' =='); }
     });
     ok(tabs.contenuto <= tabs.visibile + 1,
        `i ${tabs.numero} tab entrano nella larghezza dello schermo (${tabs.contenuto} <= ${tabs.visibile})`);
+
+    /* ------------------------------------------------ spedizioni */
+    sezione('SPEDIZIONI');
+    await page.evaluate(() => {
+      UI.chiudi();
+      Engine.state.livello = 5; Engine.nucleo().lvl = 5;
+      Engine.state.res.rtm = 8000; Engine.state.res.leg = 800;
+      Engine.state.res.bio = 900; Engine.state.res.h2o = 900;
+      Engine.state.pop = 60;
+      for (let y = 0; y < Engine.MAP_H; y++) for (let x = 0; x < Engine.MAP_W; x++) {
+        const t = Engine.tile(x, y);
+        if (t && t.t === 'rubble' && !t.cl && Engine.nelSettore(x, y, 1, 1)) Engine.sgombera(x, y);
+        if (Engine.puoPiazzare('centro', x, y).ok) { Engine.piazza('centro', x, y); y = 99; break; }
+      }
+      Engine.aggiorna(0);
+    });
+    ok(await page.evaluate(() => Spedizioni.squadreMax(Engine)) >= 1,
+       'un CENTRO SPEDIZIONI attivo mette a disposizione una squadra');
+
+    await page.evaluate(() => UI.apri('spedizioni'));
+    await page.waitForTimeout(150);
+    const pannelloSped = await page.textContent('#panel');
+    ok(/TERRITORI NOTI/.test(pannelloSped) && /EQUIPAGGIAMENTO/.test(pannelloSped),
+       'il pannello elenca territori ed equipaggiamenti');
+    ok(await page.locator('#panel .voce[data-az="sped-terr"]').count() >= 3,
+       'ci sono territori raggiungibili al grado attuale');
+
+    const partenza = await page.evaluate(() => {
+      const primo = Engine.state.territori.find(t => Spedizioni.archeDi(t).minLvl <= Engine.state.livello);
+      UI.spedTerr = primo.id; UI.spedEquip = 'standard';
+      const popPrima = Engine.state.pop;
+      UI.azione('sped-parti');
+      return { partita: Engine.state.spedizioni.length === 1, popPrima, popDopo: Engine.state.pop };
+    });
+    ok(partenza.partita, 'la squadra parte');
+    ok(partenza.popDopo === partenza.popPrima - 4, 'i coloni della squadra lasciano il settore');
+
+    const rientro = await page.evaluate(() => {
+      let rapporto = null;
+      Engine.on('spedizione', r => { rapporto = r; });
+      for (let i = 0; i < 400 && !rapporto; i++) Engine.aggiorna(1);
+      return { rapporto, inViaggio: Engine.state.spedizioni.length, pop: Engine.state.pop };
+    });
+    ok(!!rientro.rapporto, 'la squadra rientra con un rapporto');
+    ok(rientro.inViaggio === 0, 'la squadra non resta in viaggio per sempre');
+    ok(['trionfo', 'riuscita', 'parziale', 'disastro'].includes(rientro.rapporto.esito),
+       `esito valido: ${rientro.rapporto ? rientro.rapporto.esito : '?'}`);
+
+    /* ------------------------------------------------ scontri */
+    sezione('SCONTRI TATTICI');
+    await page.evaluate(() => { UI.velocita = 0; Engine.state.battaglia = null; });
+    const avvistamento = await page.evaluate(() => {
+      Battaglia.avvista(Engine);
+      return Engine.state.battaglia && { fase: Engine.state.battaglia.fase, forza: Engine.state.battaglia.forza };
+    });
+    ok(avvistamento && avvistamento.fase === 'avvistata',
+       `l attacco viene avvistato prima di colpire (forza ${avvistamento ? avvistamento.forza : '?'})`);
+    ok(/ATTACCO/.test(await page.textContent('#hud-top')) === false ||
+       await page.evaluate(() => { UI.aggiornaHud(); return !!document.querySelector('#hud-top .allarme-batt'); }),
+       'l HUD mostra l allarme');
+
+    await page.evaluate(() => { for (let i = 0; i < Battaglia.AVVISTAMENTO + 1; i++) Engine.aggiorna(1); });
+    await page.waitForTimeout(200);
+    ok(await page.evaluate(() => Engine.state.battaglia && Engine.state.battaglia.fase) === 'scelta',
+       'scaduto il preavviso si passa alla scelta');
+    ok(await page.locator('#panel .voce[data-az="tattica"]').count() >= 2,
+       'il pannello offre piu tattiche selezionabili');
+
+    const tattiche = await page.evaluate(() => Battaglia.TATTICHE.map(t => ({
+      id: t.id, disp: t.disponibile(Engine), prob: Math.round(Battaglia.probabilita(Engine, t) * 100)
+    })));
+    ok(tattiche.every(t => t.prob >= 0 && t.prob <= 100), 'ogni tattica mostra una probabilita sensata');
+    ok(tattiche.find(t => t.id === 'imboscata').disp === (await page.evaluate(() => Engine.state.intel >= 1)),
+       'l imboscata dipende dall INTEL disponibile');
+
+    const scontro = await page.evaluate(() => {
+      const popPrima = Engine.state.pop;
+      UI.azione('tattica', 'statica');
+      return { risolto: Engine.state.battaglia === null, popPrima, pop: Engine.state.pop };
+    });
+    ok(scontro.risolto, 'la tattica scelta risolve lo scontro');
+    ok(await page.locator('#toasts .overlay').count() > 0, 'compare il rapporto di scontro');
+
+    /* risposta automatica se il giocatore non decide */
+    const automatica = await page.evaluate(() => {
+      document.querySelectorAll('#toasts>*').forEach(o => o.remove());
+      Engine.state.battaglia = null;
+      Battaglia.avvista(Engine);
+      for (let i = 0; i < Battaglia.AVVISTAMENTO + Battaglia.GRAZIA + 2; i++) Engine.aggiorna(1);
+      return Engine.state.battaglia === null;
+    });
+    ok(automatica, 'senza decisione il settore si difende da solo invece di restare bloccato');
 
     /* ------------------------------------------------ salvataggi */
     sezione('SALVATAGGI');
@@ -235,6 +329,7 @@ function sezione(n) { console.log('\n== ' + n + ' =='); }
     ok(demolizione.coerente, 'gli indici delle celle restano coerenti dopo la demolizione');
 
     /* migrazione da un salvataggio del primo formato */
+    const versioneCorrente = await page.evaluate(() => Engine.state.v);
     await page.evaluate(() => {
       Engine.nuovaPartita(999);
       Engine.state.res.rtm = 4321; Engine.state.livello = 3; Engine.state.pop = 40;
@@ -261,7 +356,8 @@ function sezione(n) { console.log('\n== ' + n + ' =='); }
     }));
     ok(migrato.rtm === 4321 && migrato.livello === 3 && migrato.pop === 40,
        'un salvataggio vecchio conserva risorse, livello e popolazione');
-    ok(migrato.versione === 3, 'la versione viene migrata');
+    ok(migrato.versione === versioneCorrente,
+       `la versione viene migrata da 1 a ${versioneCorrente}`);
     ok(migrato.nucleo === 3, 'il Nucleo viene allineato al livello raggiunto');
     ok(migrato.storia, 'la struttura narrativa viene creata');
     ok(migrato.tutorialChiuso, 'a chi era gia in partita il tutorial non viene riproposto');

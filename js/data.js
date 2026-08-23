@@ -171,6 +171,15 @@
       desc: 'Lamiere saldate e cemento armato. Non ferma un blindato, ma rallenta abbastanza da far parlare le torrette.'
     },
     {
+      id: 'centro', nome: 'CENTRO SPEDIZIONI', cat: 'LOGISTICA', glyph: 'E',
+      w: 2, h: 1, color: 'gold', maxLvl: 5,
+      limiti: [0, 0, 1, 1, 1, 2, 2, 3, 3, 4],
+      unlock: 3, cost: { rtm: 200, leg: 30 },
+      jobs: 3, housing: 0, produce: {}, consume: { nrg: 8, bio: 0.4 },
+      contamina: 0, morale: 2, difesa: 2,
+      desc: 'Rimessa, officina e sala mappe. Da qui partono le squadre che vanno a vedere cosa c e oltre il perimetro: ogni grado permette di tenerne in viaggio una in piu ogni due. Le informazioni che riportano valgono quanto il bottino.'
+    },
+    {
       id: 'officina', nome: 'OFFICINA DRONI', cat: 'INDUSTRIA', glyph: 'o',
       w: 2, h: 1, color: 'scrap', maxLvl: 5,
       limiti: [0, 0, 1, 2, 3, 4, 5, 6, 7, 8],

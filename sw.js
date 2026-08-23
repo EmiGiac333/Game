@@ -1,8 +1,9 @@
 /* NEXUS-7 :: service worker -- gioco disponibile offline dopo la prima apertura. */
-var CACHE = 'nexus7-v3';
+var CACHE = 'nexus7-v4';
 var FILES = [
   './', './index.html', './css/style.css', './icon.svg', './manifest.webmanifest',
   './js/data.js', './js/sprites.js', './js/story.js', './js/tutorial.js',
+  './js/spedizioni.js', './js/battaglia.js',
   './js/engine.js', './js/render.js', './js/ui.js', './js/main.js',
   './sprites/elenco.json'
 ];

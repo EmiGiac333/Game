@@ -7,6 +7,7 @@
 
   var D = global.DATA, E = global.Engine, R = global.Render;
   var ST = global.Story, TU = global.Tutorial, SP = global.Sprites;
+  var SPED = global.Spedizioni, BAT = global.Battaglia;
   var $ = function (s) { return document.querySelector(s); };
 
   /* Passi di zoom: lato della cella in pixel. Ogni valore divide 512 per un
@@ -39,6 +40,8 @@
     mosso: false,                                  /* il giocatore ha mosso il cursore */
     visto: { scansione: false, ricerca: false },   /* pannelli gia' aperti almeno una volta */
     storiaAperta: null,                            /* voce espansa nel pannello STORIA */
+    spedTerr: null,                                /* territorio scelto nel pannello SPEDIZIONI */
+    spedEquip: 'standard',
     accumulo: 0,
     ultimoTick: 0,
 
@@ -66,7 +69,18 @@
       E.on('tech', function (id) { self.sbloccaFrammento('tech:' + id); });
       E.on('evento', function (ev) { if (ev && ev.id) self.sbloccaFrammento('evento:' + ev.id); });
 
+      E.on('spedizione', function (r) { self.rapportoSpedizione(r); });
+      E.on('battaglia', function (c) {
+        if (c.tipo === 'scelta') {
+          self.toast('IMPATTO: scegli come rispondere.', 'bad');
+          self.apri('battaglia');
+        } else if (c.tipo === 'auto') {
+          self.rapportoBattaglia(c.rapporto);
+        }
+      });
+
       ST.init(E.state); TU.init(E.state);
+      SPED.init(E.state); BAT.init(E.state);
 
       this.applicaZoom();
       this.disegnaMappa();
@@ -257,6 +271,27 @@
         case 'tut-chiudi':
           TU.chiudi(E.state); this.aggiornaTutorial();
           break;
+        case 'sped-terr':
+          this.spedTerr = arg; this.rinfrescaPannello();
+          break;
+        case 'sped-equip':
+          this.spedEquip = arg; this.rinfrescaPannello();
+          break;
+        case 'sped-parti': {
+          var terr = SPED.territorioById(E.state, this.spedTerr);
+          var eq = SPED.equipById(this.spedEquip);
+          r = terr ? SPED.parti(E, terr, eq) : { ok: false, motivo: 'NESSUN TERRITORIO SCELTO' };
+          this.toast(r.ok ? 'Squadra in partenza.' : r.motivo, r.ok ? 'good' : 'bad');
+          this.rinfrescaPannello(); this.aggiornaHud();
+          break;
+        }
+        case 'tattica': {
+          var rap = BAT.risolvi(E, arg);
+          this.chiudi();
+          this.rapportoBattaglia(rap);
+          this.aggiornaHud(); this.disegnaMappa(); this.aggiornaCtx();
+          break;
+        }
         case 'storia-voce':
           this.storiaAperta = (this.storiaAperta === arg) ? null : arg;
           this.rinfrescaPannello();
@@ -267,7 +302,18 @@
           break;
         case 'carica':
           if (E.carica()) { this.selezione = null; R.tipoDaCostruire = null; this.chiudi();
-            ST.init(E.state); TU.init(E.state); this.aggiornaTutorial();
+            E.on('spedizione', function (r) { self.rapportoSpedizione(r); });
+      E.on('battaglia', function (c) {
+        if (c.tipo === 'scelta') {
+          self.toast('IMPATTO: scegli come rispondere.', 'bad');
+          self.apri('battaglia');
+        } else if (c.tipo === 'auto') {
+          self.rapportoBattaglia(c.rapporto);
+        }
+      });
+
+      ST.init(E.state); TU.init(E.state);
+      SPED.init(E.state); BAT.init(E.state); this.aggiornaTutorial();
             this.disegnaMappa(); this.aggiornaHud(); this.aggiornaCtx(); this.toast('Partita caricata.', 'good'); }
           else this.toast('Nessun salvataggio trovato.', 'bad');
           break;
@@ -335,15 +381,24 @@
       var vel = VELOCITA[this.velocita];
       var etichettaVel = vel === 0 ? '||' : 'x' + vel;
 
-      var cant = st.nucleoUp;
+      var cant = st.nucleoUp, batt = st.battaglia;
+      var destra;
+      if (batt) {
+        /* l'allarme ha la precedenza su tutto ed e' toccabile */
+        destra = '<span class="allarme-batt" data-az="pannello" data-arg="battaglia">' +
+                 (batt.fase === 'avvistata' ? 'ATTACCO ' : 'IMPATTO ') +
+                 Math.ceil(batt.resta) + 'c</span>';
+      } else if (cant) {
+        destra = '<span class="cantiere">MK-' + cant.a + ' ' +
+                 R.barra(1 - cant.resta / cant.totale, 5) + ' ' + Math.ceil(cant.resta) + 'c</span>';
+      } else {
+        destra = '<span class="ciclo">CICLO ' + Math.floor(st.ciclo) + '</span>';
+      }
       $('#hud-top').innerHTML =
         '<span class="tit">NEXUS-7</span>' +
         '<span class="liv">NUCLEO MK-' + st.livello + '</span>' +
         '<span class="nomeliv">' + liv.nome + '</span>' +
-        (cant
-          ? '<span class="cantiere">MK-' + cant.a + ' ' +
-            R.barra(1 - cant.resta / cant.totale, 5) + ' ' + Math.ceil(cant.resta) + 'c</span>'
-          : '<span class="ciclo">CICLO ' + Math.floor(st.ciclo) + '</span>') +
+        destra +
         '<span class="btn mini" data-az="velocita">' + etichettaVel + '</span>';
 
       $('#hud-res').innerHTML = chips;
@@ -355,7 +410,10 @@
         '<span class="st ' + (nrgOk ? '' : 'allarme') + '"><b>NRG</b> ' + n1(st.nrgProd) + '/' + n1(st.nrgCons) + '</span>' +
         '<span class="st"><b>MOR</b> ' + R.barra(st.morale / 100, 6) + '</span>' +
         '<span class="st ' + (st.ctm > 50 ? 'allarme' : '') + '"><b>CTM</b> ' + R.barra(st.ctm / 100, 6) + '</span>' +
-        '<span class="st"><b>DIF</b> ' + st.difesa + '</span>';
+        '<span class="st"><b>DIF</b> ' + st.difesa + '</span>' +
+        '<span class="st"><b>INT</b> ' + st.intel + '</span>' +
+        (st.spedizioni && st.spedizioni.length
+          ? '<span class="st"><b>SPED</b> ' + st.spedizioni.length + '</span>' : '');
 
       /* asterisco sulla tab STORIA quando ci sono voci non ancora lette */
       var tabStoria = document.querySelector('#tabs [data-arg="storia"]');
@@ -456,6 +514,8 @@
       if (nome === 'citta') return this.pCitta();
       if (nome === 'diario') return this.pDiario();
       if (nome === 'storia') return this.pStoria();
+      if (nome === 'spedizioni') return this.pSpedizioni();
+      if (nome === 'battaglia') return this.pBattaglia();
       if (nome === 'manuale') return this.pManuale();
       if (nome === 'menu') return this.pMenu();
       return '';
@@ -473,6 +533,9 @@
       if (nome === 'scansione') this.visto.scansione = true;
       if (nome === 'ricerca') this.visto.ricerca = true;
       if (nome === 'storia') ST.segnaTuttoLetto(E.state);
+      if (nome === 'spedizioni' && !this.spedTerr && E.state.territori.length) {
+        this.spedTerr = E.state.territori[0].id;
+      }
       $('#panel').innerHTML = this.corpoPannello(nome);
       $('#panel').classList.add('aperto');
       this.verificaTutorial();
@@ -738,6 +801,18 @@
       h += this.riga('RAID RESPINTI', st.statistiche.raidRespinti);
       h += '</div>';
 
+      h += '<div class="cat">-- RICOGNIZIONI E SCONTRI --</div><div class="tab">';
+      h += this.riga('SQUADRE', st.spedizioni.length + ' / ' + SPED.squadreMax(E) + ' in viaggio');
+      h += this.riga('INTEL', st.intel + ' / ' + SPED.INTEL_MAX, st.intel > 0 ? 'ok' : '');
+      h += this.riga('SPEDIZIONI', st.spedStat.riuscite + ' riuscite su ' + st.spedStat.partite +
+                     (st.spedStat.perduti ? ', ' + st.spedStat.perduti + ' perduti' : ''));
+      h += this.riga('SCONTRI', st.battStat.vinte + ' vinti, ' + st.battStat.perse + ' persi' +
+                     (st.battStat.trattate ? ', ' + st.battStat.trattate + ' trattati' : ''));
+      if (st.predoniIndeboliti > 0) {
+        h += this.riga('PREDONI INDEBOLITI', Math.ceil(st.predoniIndeboliti) + ' cicli', 'ok');
+      }
+      h += '</div>';
+
       h += '<div class="cat">-- BILANCIO RISORSE / CICLO --</div><div class="tab">';
       var netti = { rtm: st.nettoRtm, h2o: st.nettoH2o, bio: st.nettoBio, leg: st.nettoLeg, dat: st.nettoDat };
       D.RESOURCES.forEach(function (r) {
@@ -769,6 +844,168 @@
       });
       h += '</div>';
       return h;
+    },
+
+    /* ---------- SPEDIZIONI ---------- */
+    pSpedizioni: function () {
+      var st = E.state, self = this;
+      var squadre = SPED.squadreMax(E);
+      var h = this.testata('RICOGNIZIONI', squadre
+        ? st.spedizioni.length + '/' + squadre + ' IN VIAGGIO -- ' + st.intel + ' INTEL'
+        : 'NESSUN CENTRO ATTIVO');
+      h += '<div class="scroll">';
+
+      if (!squadre) {
+        h += '<p class="dim">Serve un <b>CENTRO SPEDIZIONI</b> attivo (si sblocca con il Nucleo a MK-3). ' +
+             'Ogni due gradi del centro puoi tenere in viaggio una squadra in piu.</p>';
+      }
+
+      /* --- squadre gia' in viaggio --- */
+      if (st.spedizioni.length) {
+        h += '<div class="cat">-- IN VIAGGIO --</div><div class="tab">';
+        st.spedizioni.forEach(function (sp) {
+          var t = SPED.territorioById(st, sp.terr);
+          h += self.riga(t ? t.nome : '???',
+            R.barra(1 - sp.resta / sp.totale, 8) + ' ' + Math.ceil(sp.resta) + 'c  ' +
+            sp.coloni + ' coloni  ' + Math.round(sp.prob * 100) + '%');
+        });
+        h += '</div>';
+      }
+
+      /* --- equipaggiamento --- */
+      h += '<div class="cat">-- EQUIPAGGIAMENTO --</div><div class="scelte">';
+      SPED.EQUIPAGGIAMENTI.forEach(function (eq) {
+        h += '<span class="btn ' + (self.spedEquip === eq.id ? 'attivo' : '') + '" ' +
+             'data-az="sped-equip" data-arg="' + eq.id + '">' + eq.nome +
+             '<u>' + eq.coloni + ' coloni</u></span>';
+      });
+      h += '</div>';
+      var eqSel = SPED.equipById(this.spedEquip);
+      h += '<p class="lore">' + esc(eqSel.desc) + '<br><span class="dim">Costo: ' +
+           esc(E.testoCosto(eqSel.costo)) + '</span></p>';
+
+      /* --- territori --- */
+      h += '<div class="cat">-- TERRITORI NOTI --</div>';
+      st.territori.forEach(function (t) {
+        var a = SPED.archeDi(t);
+        var sceltoOra = self.spedTerr === t.id;
+        var bloccato = a.minLvl > st.livello;
+        var prob = SPED.probabilita(E, t, eqSel);
+        var premi = [];
+        for (var k in a.bottino) premi.push(k.toUpperCase());
+        if (a.intel) premi.push(a.intel + ' INTEL');
+        if (a.coloni) premi.push('COLONI');
+        if (a.frammento) premi.push('ARCHIVIO');
+
+        h += '<div class="voce ' + (bloccato ? 'bloccata' : (sceltoOra ? 'fatta' : '')) + '" ' +
+             (bloccato ? '' : 'data-az="sped-terr" data-arg="' + t.id + '"') + '>' +
+             '<div class="v-a"><b>' + esc(t.nome) + '</b>' +
+             '<span class="conta">' + new Array(a.pericolo + 1).join('!') + '</span></div>' +
+             '<div class="v-b">' + (bloccato
+                ? '<span class="no">RICHIEDE NUCLEO MK-' + a.minLvl + '</span>'
+                : 'viaggio ' + Math.round(t.distanza / eqSel.velocita) + ' cicli -- riuscita ' +
+                  '<span class="' + (prob > 0.6 ? 'ok' : 'no') + '">' + Math.round(prob * 100) + '%</span>' +
+                  (t.visite ? ' -- gia visitato ' + t.visite + 'x' : '')) + '</div>' +
+             '<div class="v-c dim">' + esc(a.testo) + '</div>' +
+             '<div class="v-c"><span class="tag">' + premi.join('</span><span class="tag">') + '</span></div>' +
+             '</div>';
+      });
+
+      /* --- partenza --- */
+      var terrSel = SPED.territorioById(st, this.spedTerr);
+      if (terrSel) {
+        var chk = SPED.puoPartire(E, terrSel, eqSel);
+        h += '<div class="azioni"><span class="btn ' + (chk.ok ? 'ok' : 'dis') + '" data-az="sped-parti">' +
+             'PARTI PER ' + esc(terrSel.nome.split(' ').slice(0, 2).join(' ')) +
+             '<u>' + (chk.ok ? eqSel.nome + ' -- ' + Math.round(SPED.probabilita(E, terrSel, eqSel) * 100) + '% di riuscita'
+                             : esc(chk.motivo)) + '</u></span></div>';
+      }
+      h += '</div>';
+      return h;
+    },
+
+    rapportoSpedizione: function (r) {
+      var righe = [
+        '+========================================+',
+        '|        R A P P O R T O   D I           |',
+        '|          R I C O G N I Z I O N E       |',
+        '+========================================+',
+        '',
+        '  ' + r.territorio,
+        '  ESITO: ' + r.nomeEsito,
+        '',
+        '  ' + SPED.testoBottino(r),
+        '  Rientrati: ' + r.tornati + (r.perse ? '   Perduti: ' + r.perse : ''),
+        ''
+      ].join('\n');
+      this.overlay(righe, r.cls, '<span class="btn ok">CHIUDI</span>');
+      if (r.frammento) this.sbloccaFrammento('spedizione:' + r.arche);
+      this.aggiornaHud();
+    },
+
+    /* ---------- SCONTRO ---------- */
+    pBattaglia: function () {
+      var st = E.state, b = st.battaglia, self = this;
+      if (!b) {
+        return this.testata('SCONTRO') + '<div class="scroll"><p class="dim">Nessun attacco in corso.</p></div>';
+      }
+      var nemico = BAT.NEMICI[b.nemico];
+      var inArrivo = b.fase === 'avvistata';
+      var h = this.testata(inArrivo ? 'AVVISTAMENTO' : 'IMPATTO',
+                           Math.ceil(b.resta) + ' CICLI');
+      h += '<div class="scroll">';
+      h += '<div class="s-nome c-danger">' + nemico.nome + '</div>';
+      h += '<div class="s-sub dim">FORZA STIMATA ' + b.forza + ' -- LE NOSTRE DIFESE ' + st.difesa + '</div>';
+      h += '<p class="lore">' + esc(nemico.testo) + '</p>';
+
+      if (inArrivo) {
+        h += '<div class="tab">' +
+             this.riga('IMPATTO FRA', R.barra(1 - b.resta / b.totale, 10) + ' ' + Math.ceil(b.resta) + ' cicli') +
+             this.riga('DIFESA ATTUALE', st.difesa, st.difesa >= b.forza ? 'ok' : 'no') +
+             this.riga('INTEL DISPONIBILE', st.intel, st.intel > 0 ? 'ok' : '') +
+             '</div>';
+        h += '<p class="lore dim">Hai ancora tempo: costruisci torrette, ripara le strutture, ' +
+             'richiama le squadre. Le tattiche si sbloccano all impatto.</p>';
+      } else {
+        h += '<div class="cat">-- SCEGLI LA RISPOSTA --</div>';
+        BAT.TATTICHE.forEach(function (t) {
+          var disp = t.disponibile(E);
+          var prob = BAT.probabilita(E, t);
+          var costo = t.costo(E);
+          var testoCosto = Object.keys(costo).length ? E.testoCosto(costo) : '';
+          h += '<div class="voce ' + (disp ? '' : 'bloccata') + '" ' +
+               (disp ? 'data-az="tattica" data-arg="' + t.id + '"' : '') + '>' +
+               '<div class="v-a"><b>' + t.nome + '</b>' +
+               '<span class="conta ' + (disp && prob < 0.5 ? 'no' : '') + '">' +
+               (t.certa ? 'SICURA' : Math.round(prob * 100) + '%') + '</span></div>' +
+               '<div class="v-b">' + (disp
+                  ? (t.certa ? 'esito garantito' : 'fa leva su: ' + t.chiave) + (testoCosto ? ' -- ' + esc(testoCosto) : '')
+                  : '<span class="no">' + (t.motivo || 'NON DISPONIBILE') + '</span>') + '</div>' +
+               '<div class="v-c dim">' + esc(t.desc) + '</div>' +
+               '</div>';
+        });
+        h += '<p class="lore dim">Se non decidi entro ' + Math.ceil(b.resta) +
+             ' cicli il settore si difende come puo: difesa statica.</p>';
+      }
+      h += '</div>';
+      return h;
+    },
+
+    rapportoBattaglia: function (r) {
+      if (!r) return;
+      var righe = ['+========================================+',
+                   '|         R A P P O R T O                |',
+                   '|            D I   S C O N T R O         |',
+                   '+========================================+',
+                   '',
+                   '  ' + r.nemico + '   forza ' + r.forza,
+                   '  TATTICA: ' + r.tattica + (r.automatica ? '  (automatica)' : ''),
+                   '  ESITO:   ' + r.esito.toUpperCase(),
+                   ''];
+      r.voci.forEach(function (v) { righe.push('  - ' + v); });
+      righe.push('');
+      this.overlay(righe.join('\n'), r.cls, '<span class="btn ok">CHIUDI</span>');
+      this.aggiornaHud();
     },
 
     /* ---------- STORIA ---------- */
@@ -878,18 +1115,37 @@
         '<p><b>Tetto:</b> nessuna struttura puo superare il grado del Nucleo. Con il Nucleo a MK-3 tutto il resto si ferma a MK-3, per quante risorse tu abbia.</p>' +
         '<p>Quando il terreno e i limiti finiscono, potenziare e l unico modo di crescere: e la strategia prevista per gli ultimi gradi.</p>';
 
-      h += '<div class="cat">-- 9. DIFESA E INCURSIONI --</div>' +
-        '<p>I predoni attaccano ogni 60-130 cicli e la loro forza cresce con il livello della citta (circa 10 + 14 per livello). Il pannello CITTA mostra la stima del prossimo raid accanto alla tua difesa.</p>' +
-        '<p>Se la difesa regge, il raid viene respinto e recuperi bottino. Se non regge, perdi rottami, strutture danneggiate e coloni. Torrette, barriere e il progetto RETE DI PUNTAMENTO (+60%) sono la risposta.</p>';
+      h += '<div class="cat">-- 9. SCONTRI --</div>' +
+        '<p>Gli attacchi non si risolvono da soli. Vengono prima <b>avvistati</b>: hai 30 cicli per prepararti, ' +
+        'costruire torrette, riparare le strutture. All impatto il gioco ti chiede <b>come rispondere</b>, ' +
+        'mostrando la probabilita di ogni tattica.</p>' +
+        '<p><b>DIFESA STATICA</b> -- pesa solo le difese. Nessun rischio in piu, nessun guadagno.<br>' +
+        '<b>SORTITA</b> -- servono almeno 25 coloni: pesa difese, popolazione e morale. Vinci molto, perdi molto.<br>' +
+        '<b>IMBOSCATA</b> -- serve INTEL dalle ricognizioni. La tattica migliore, se hai esplorato.<br>' +
+        '<b>TRATTATIVA</b> -- paghi il pedaggio: nessun morto, nessun danno, ma il morale scende. Lo SCIAME non tratta.<br>' +
+        '<b>RITIRATA ORDINATA</b> -- sgomberi la fascia esterna: perdi magazzini, salvi tutte le persone.</p>' +
+        '<p>Se non decidi entro 20 cicli il settore si difende come puo, in statica. ' +
+        'Dal MK-8 possono arrivare gli sciami: piu forti, e con loro non si tratta.</p>';
 
-      h += '<div class="cat">-- 10. CONTAMINAZIONE --</div>' +
+      h += '<div class="cat">-- 10. RICOGNIZIONI --</div>' +
+        '<p>Con un <b>CENTRO SPEDIZIONI</b> attivo (Nucleo MK-3) puoi mandare squadre oltre il perimetro. ' +
+        'Ogni due gradi del centro tieni in viaggio una squadra in piu.</p>' +
+        '<p>Scegli un <b>territorio</b> e un <b>equipaggiamento</b>: leggero e rapido ed economico ma fragile, ' +
+        'pesante e lento e costoso ma torna quasi sempre, e carico. La squadra parte con i suoi coloni, ' +
+        'che tornano solo se le cose vanno bene.</p>' +
+        '<p>Riportano risorse, coloni, frammenti d archivio e soprattutto <b>INTEL</b>: le informazioni ' +
+        'sbloccano l imboscata e migliorano ogni ricognizione successiva. Colpire un accampamento predoni ' +
+        'li tiene lontani per centinaia di cicli.</p>' +
+        '<p class="dim">Le informazioni invecchiano: oltre 12 INTEL non servono a nulla, quindi spendile.</p>';
+
+      h += '<div class="cat">-- 11. CONTAMINAZIONE --</div>' +
         '<p>Fonderie, reattori, officine e raccoglitori emettono contaminazione; TORRI DI FILTRAGGIO e RIGENERATORI ATMOSFERICI la assorbono. Oltre il <b>55%</b> i coloni cominciano a morire, e il morale scende comunque in proporzione.</p>';
 
-      h += '<div class="cat">-- 11. RICERCA --</div>' +
+      h += '<div class="cat">-- 12. RICERCA --</div>' +
         '<p>Dieci progetti in albero: alcuni richiedono un progetto precedente, tutti richiedono un livello citta minimo. Sbloccano bonus permanenti e tre strutture chiave (reattore, arcologia, spazioporto).</p>' +
         '<p>Ogni progetto completato recupera anche un <b>frammento d archivio</b>: la storia del Settore-7 si legge nel pannello STORIA.</p>';
 
-      h += '<div class="cat">-- 12. STRATEGIA D APERTURA --</div>' +
+      h += '<div class="cat">-- 13. STRATEGIA D APERTURA --</div>' +
         '<p>Un ordine che funziona:</p>' +
         '<p>1. Sgombera due o tre celle di macerie vicine al Nucleo.<br>' +
         '2. Un RACCOGLITORE adiacente alle macerie rimaste.<br>' +
@@ -901,7 +1157,7 @@
         '8. Appena hai 250 RTM da parte, apri il cantiere del NUCLEO MK-2.</p>' +
         '<p class="dim">Regola generale: risolvi sempre per primo il vincolo peggiore. Se NRG e rosso costruisci energia, se LAV e in deficit costruisci alloggi, se H2O o BIO sono negativi costruisci acqua o cibo. Tutto il resto puo aspettare.</p>';
 
-      h += '<div class="cat">-- 13. SALVATAGGIO --</div>' +
+      h += '<div class="cat">-- 14. SALVATAGGIO --</div>' +
         '<p>La partita si salva da sola ogni 15 cicli, quando esci e quando metti l app in secondo piano. Il salvataggio resta su questo dispositivo. Dal MENU puoi salvare e caricare a mano.</p>';
 
       h += '</div>';

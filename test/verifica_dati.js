@@ -11,7 +11,7 @@ const path = require('path');
 
 const RADICE = path.join(__dirname, '..');
 global.window = global;
-['data', 'story', 'tutorial', 'engine'].forEach(m => require(path.join(RADICE, 'js', m + '.js')));
+['data', 'story', 'tutorial', 'spedizioni', 'battaglia', 'engine'].forEach(m => require(path.join(RADICE, 'js', m + '.js')));
 const D = global.DATA, ST = global.Story, TU = global.Tutorial;
 
 let errori = 0, controlli = 0;
@@ -152,12 +152,19 @@ ST.CAPITOLI.forEach((c, i) => {
   ok(c.lvl === i + 1, `capitolo ${i}: livello ${c.lvl} fuori sequenza`);
   ok(c.testo && c.testo.length > 100, `capitolo ${c.lvl}: testo troppo breve`);
 });
-const idTech = D.TECHS.map(t => t.id);
-const idEventi = D.EVENTS.map(e => e.id);
+const fonti = {
+  tech: D.TECHS.map(t => t.id),
+  evento: D.EVENTS.map(e => e.id),
+  spedizione: global.Spedizioni.ARCHETIPI.map(a => a.id)
+};
 ST.FRAMMENTI.forEach(f => {
   const [tipo, val] = f.fonte.split(':');
-  const valido = tipo === 'tech' ? idTech.includes(val) : idEventi.includes(val);
-  ok(valido, `frammento ${f.id}: fonte '${f.fonte}' non esiste`);
+  ok(fonti[tipo] && fonti[tipo].includes(val), `frammento ${f.id}: fonte '${f.fonte}' non esiste`);
+});
+/* ogni archetipo che promette un archivio deve avere davvero un frammento */
+global.Spedizioni.ARCHETIPI.filter(a => a.frammento).forEach(a => {
+  ok(ST.FRAMMENTI.some(f => f.fonte === 'spedizione:' + a.id),
+     `l'archetipo ${a.id} promette un frammento ma non ne esiste uno con fonte 'spedizione:${a.id}'`);
 });
 ok(!!ST.FINALI.vittoria && !!ST.FINALI.sconfitta, 'manca uno dei due epiloghi');
 

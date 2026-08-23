@@ -113,14 +113,14 @@
     },
     {
       id: 'difesa', titolo: 'I FIGLI DELLA RUGGINE',
-      testo: 'I predoni attaccano periodicamente e diventano piu\' forti a ogni livello. Se la tua DIFESA e\' sotto la loro forza perdi risorse, strutture e coloni.\n\nIl pannello CITTA\' stima la forza del prossimo raid.',
+      testo: 'I predoni attaccano periodicamente e diventano piu\' forti a ogni grado del Nucleo.\n\nL attacco viene prima AVVISTATO: hai trenta cicli per prepararti. All impatto il gioco ti chiede COME rispondere - difesa statica, sortita, imboscata, trattativa o ritirata - mostrando la probabilita di ognuna.\n\nSe non decidi in tempo, il settore si difende come puo.',
       azione: 'Costruisci una TORRETTA AUTOMATICA',
-      suggerimento: 'Le torrette consumano energia: senza rete sono pali inerti.',
+      suggerimento: 'Le torrette consumano energia: senza rete sono pali inerti. La difesa conta in tutte le tattiche.',
       fatto: function (E) { return conta(E, 'torretta') >= 1; }
     },
     {
       id: 'fine', titolo: 'IL RESTO E\' TUO',
-      testo: 'Sai il necessario.\n\nDieci livelli di citta\', venticinque strutture, dieci progetti di ricerca. In fondo alla strada c\'e\' lo SPAZIOPORTO ESODO, e una domanda a cui l\'Amministratore non ha ancora risposto.\n\nIl MANUALE resta nel MENU, sempre disponibile. Anche questo tutorial.',
+      testo: 'Sai il necessario.\n\nDieci gradi del Nucleo, ventisei strutture, dieci progetti di ricerca. Con il Nucleo a MK-3 sbloccherai il CENTRO SPEDIZIONI: da li\' partono le ricognizioni oltre il perimetro, che riportano risorse, archivi e le informazioni con cui si vincono gli scontri.\n\nIn fondo alla strada c\'e\' lo SPAZIOPORTO ESODO, e una domanda a cui l\'Amministratore non ha ancora risposto.\n\nIl MANUALE resta nel MENU, sempre disponibile. Anche questo tutorial.',
       azione: 'Tutorial completato',
       suggerimento: '',
       fatto: function () { return false; }   /* ultimo passo: si chiude a mano */

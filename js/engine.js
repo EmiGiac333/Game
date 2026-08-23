@@ -9,7 +9,7 @@
   var D = global.DATA;
   var MAP_W = 28, MAP_H = 18;
   var SAVE_KEY = 'nexus7.save.v1';
-  var SAVE_VER = 3;
+  var SAVE_VER = 4;
   var CICLO_MS = 1000;
 
   /* ---- RNG deterministico (mulberry32) ---- */
@@ -95,9 +95,13 @@
         tech: {},
         log: [],
         nucleoUp: null,
+        spedizioni: [], territori: [], intel: 0, predoniIndeboliti: 0,
+        battaglia: null,
         prossimoEvento: 70,
         eventiAttivi: [],
         statistiche: { costruiti: 0, demoliti: 0, raidRespinti: 0, mortiTotali: 0, natiTotali: 0 },
+        spedStat: { partite: 0, riuscite: 0, perduti: 0, bottino: 0 },
+        battStat: { vinte: 0, perse: 0, trattate: 0, ritirate: 0 },
         lancioAvviato: false, lancioTimer: 0, vittoria: false, gameover: false
       };
       this.state = st;
@@ -109,6 +113,8 @@
 
       if (global.Story) global.Story.init(st);
       if (global.Tutorial) global.Tutorial.init(st);
+      if (global.Spedizioni) global.Spedizioni.generaTerritori(st, this.rng);
+      if (global.Battaglia) global.Battaglia.init(st);
 
       this.logga('Modulo Arca atterrato nel Settore-7. Sei l Amministratore.', 'sys');
       this.logga('Sgombera le macerie e costruisci: rottami, acqua, cibo, energia.', 'sys');
@@ -613,6 +619,19 @@
 
       /* --- 13. cantiere del Nucleo --- */
       this.avanzaCantiere(dt);
+
+      /* --- 14. spedizioni in viaggio --- */
+      if (global.Spedizioni) {
+        var rapporti = global.Spedizioni.avanza(this, dt);
+        for (i = 0; i < rapporti.length; i++) this.emit('spedizione', rapporti[i]);
+        if (rapporti.length) this.emit('mappa');
+      }
+
+      /* --- 15. attacco in avvicinamento o in corso --- */
+      if (global.Battaglia) {
+        var cambio = global.Battaglia.avanza(this, dt);
+        if (cambio) this.emit('battaglia', cambio);
+      }
     },
 
     /* =========================================================
@@ -710,21 +729,11 @@
           break;
         }
         case 'raid': {
-          var forza = 10 + L * 14 + Math.floor(this.rng() * 12);
-          if (st.difesa >= forza) {
-            st.statistiche.raidRespinti++;
-            this.aggiungi('rtm', 25 + L * 8);
-            dettaglio = 'RESPINTI (difesa ' + st.difesa + ' vs ' + forza + '). Bottino recuperato.';
-            ev = { nome: ev.nome, tipo: 'raid', testo: ev.testo };
-          } else {
-            var rubati = Math.floor(st.res.rtm * 0.18) + 10;
-            st.res.rtm = Math.max(0, st.res.rtm - rubati);
-            var c2 = this.danneggiaCasuali(2 + Math.floor(this.rng() * 3), 18 + Math.floor(this.rng() * 20));
-            var vittime = Math.max(0, Math.floor(st.pop * 0.03));
-            st.pop = Math.max(0, st.pop - vittime);
-            st.statistiche.mortiTotali += vittime;
-            dettaglio = 'DIFESE INSUFFICIENTI (' + st.difesa + ' vs ' + forza + '): -' + rubati + ' RTM, ' + c2 + ' strutture danneggiate, ' + vittime + ' vittime.';
-          }
+          /* Non si risolve piu' qui: l'attacco viene avvistato e la
+             risposta la sceglie il giocatore (vedi battaglia.js). */
+          var av = global.Battaglia ? global.Battaglia.avvista(this) : null;
+          if (!av) { st.prossimoEvento = 30; return; }   /* scontro gia' in corso */
+          dettaglio = 'Forza stimata ' + av.forza + '. Impatto fra ' + av.resta + ' cicli: preparati.';
           break;
         }
         case 'profughi': {
@@ -841,6 +850,14 @@
               if (ed.id === 'nucleo') eb.lvl = Math.max(1, Math.min(ed.maxLvl, st.livello));
               else eb.lvl = Math.max(1, Math.min(ed.maxLvl, Math.min(eb.lvl, st.livello)));
             }
+          }
+          if (st.v < 4) {
+            /* v4: spedizioni e scontri tattici. I territori vanno generati
+               anche per una partita gia' in corso, altrimenti il Centro
+               Spedizioni non avrebbe dove mandare nessuno. */
+            if (global.Spedizioni) global.Spedizioni.generaTerritori(st, this.rng);
+            if (global.Battaglia) global.Battaglia.init(st);
+            if (typeof st.predoniIndeboliti !== 'number') st.predoniIndeboliti = 0;
           }
           st.v = SAVE_VER;
         }
