@@ -8,3 +8,7 @@ node_modules/
 
 # cartella costruita dal workflow di pubblicazione
 _sito/
+
+# cache di Python
+__pycache__/
+*.pyc
